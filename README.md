@@ -3,7 +3,7 @@
 Ein Gradle-Plugin, das Mac Apps erzeugt und signiert.
 Muss auf einem Mac ausgeführt werden[^unix].
 
-[^unix] Eine unsignierte Mac App kann auf auf Linux/WSL erzeugt werden.
+[^unix]: Eine unsignierte Mac App kann auf auf Linux/WSL erzeugt werden.
 
 
 ## Verwendung
@@ -276,7 +276,8 @@ macApp {
 
 ## Projektnamen und Versionsnummer in Java auslesen
 
-```groovy
+```{code-block} groovy
+:caption: In build.gradle
 version = "1.0.0"
 
 ext {
@@ -294,6 +295,26 @@ task createProperties(dependsOn: processResources) {
         }
     }
 }
+```
+
+```{code-block} Java
+:caption: Im Java-Code
+
+import java.util.ResourceBundle;
+
+// ===============================================================================================
+// Property Interface
+// ===============================================================================================
+
+/** The metadata properties file generated in gradle. */
+private static final ResourceBundle meta = ResourceBundle.getBundle("meta");
+
+/** The app’s build version. */
+public static final String version = meta.getString("version");
+
+/** The app’s display name. */
+public static final String name = meta.getString("name");
+
 ```
 
 ## Neue Versionen veröffentlichen
