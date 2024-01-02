@@ -80,7 +80,7 @@ universalJavaApplicationStub {
 
     Default bei *compiled == false*: `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"`
 
-**outdir** (Optional, Default: `"&dollar;{buildDir}/universalJavaApplicationStub"`)
+**outdir** (Optional, Default: `"${buildDir}/universalJavaApplicationStub"`)
 
 
 #### API-Doku
@@ -96,8 +96,8 @@ Hier ist ersteres das *targetFile* des Shell-Skripts und letzteres das des kompi
 macApp {
     appName = "Meine App"
     developmentRegion = "de"
-    copyright = "© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
-    icon = "&dollar;{projectDir}/src/build/icon.icns"
+    copyright = "© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
+    icon = "${projectDir}/src/build/icon.icns"
 }
 ```
 
@@ -113,11 +113,11 @@ Es wird dann einfach ausgeführt mit
 
 #### Argumente
 
-**appName** (Optional, Default: `&dollar;{project.name}`)
+**appName** (Optional, Default: `${project.name}`)
 :   Der Name der *.app*-Datei ohne die Endung.
     Sollte auf macOS auch der Anzeigename sein.
 
-**outdir** (Optional, Default: `"&dollar;{buildDir}/unsignedMacApp"`)
+**outdir** (Optional, Default: `"${buildDir}/unsignedMacApp"`)
 
 **pkgInfoSignature** (Optional, Default: automatisch berechnet)
 :   Paketsignatur für *PkgInfo*.
@@ -141,12 +141,12 @@ Es wird dann einfach ausgeführt mit
 **copyright** (Optional, Default: `null`)
 :   Copyright-String.
 
-    **Beispiel:** `"© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
+    **Beispiel:** `"© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
 
 **icon** (Optional, Default: `null`)
 :   Pfad zu einer *.icns*-Datei.
 
-    **Beispiel:** `"&dollar;{projectDir}/src/build/icon.icns"`
+    **Beispiel:** `"${projectDir}/src/build/icon.icns"`
 
 **viewableDocumentTypes** (Optional, Default: `null`)
 :   UTIs verschiedener Dokumententypen, die in dieser app geöffnet werden können.
@@ -222,7 +222,7 @@ Alle Argumente, die angegeben werden müssen, können auch direkt über Umgebung
 **dmgIcon** (Optional, Default: Die gleiche Datei wie das App-Icon der macOS-App)
 :   Das Icon das für die *.dmg*-Datei verwendet werden soll.
 
-**outdir** (Optional, Default: `"&dollar;{buildDir}/signedMacApp"`)
+**outdir** (Optional, Default: `"${buildDir}/signedMacApp"`)
 
 
 #### API-Doku
