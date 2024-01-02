@@ -30,8 +30,8 @@ application {
 macApp {
     appName = "Example App"
     developmentRegion = "de"
-    copyright = "© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
-    icon = "&dollar;{projectDir}/src/build/icon.icns"
+    copyright = "© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
+    icon = "${projectDir}/src/build/icon.icns"
 }
 ```
 
@@ -56,7 +56,7 @@ universalJavaApplicationStub {
     // Keine manuellen Angaben nötig. Das sind die Standardwerte:
 	compiled = false
 	downloadURL = "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"
-	outdir = "&dollar;{buildDir}/universalJavaApplicationStub"
+	outdir = "${buildDir}/universalJavaApplicationStub"
 }
 ```
 
@@ -247,6 +247,54 @@ shadowJar {
 
 Die Größe der Output-JAR zu (ca.) halbieren.
 
+
+## errSecInternalComponent
+
+Dies ist ein Fehler, der manchmal auftritt.
+Bisher war das nur, nachdem wiederholt über SSH auf einem Mac getested wurde.
+Dieser Fehler kann nur durch einen Neustart behoben werden.
+
+
+## Variablenwiederverwendung – displayname
+
+Womöglich soll ein anderer Name als der Projektname (Name des Ordners in dem der Quellcode liegt) verwendet werden.
+Hierfür sollte der Name in einer eigenen Variable abgespeichert werden.
+In Groovy macht man das so:
+
+```groovy
+
+ext {
+    displayname = "Meine App"
+}
+
+macApp {
+    appName = "${displayname}"
+    ...
+}
+```
+
+
+## Projektnamen und Versionsnummer in Java auslesen
+
+```groovy
+version = "1.0.0"
+
+ext {
+    displayname = "Meine App"
+}
+
+// Create a properties file with version and program name
+task createProperties(dependsOn: processResources) {
+    doLast {
+        new File("${buildDir}/resources/main/meta.properties").withWriter { w ->
+            Properties p = new Properties()
+            p['version'] = project.version.toString()
+            p['name'] = displayname
+            p.store w, null
+        }
+    }
+}
+```
 
 ## Neue Versionen veröffentlichen
 
