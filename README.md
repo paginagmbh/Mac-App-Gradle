@@ -5,7 +5,9 @@ Muss auf einem Mac ausgeführt werden[^unix].
 
 [^unix] Eine unsignierte Mac App kann auf auf Linux/WSL erzeugt werden.
 
+
 ## Verwendung
+
 
 ### Minimalbeispiel
 
@@ -41,9 +43,11 @@ macApp {
 ./gradlew signedAndNotarizedMacApp
 ```
 
+
 ## Taskdokumentation
 
 Dieses Plugin besteht aus drei sub-Tasks, die in Reihenfolge abgehandelt werden.
+
 
 ### universalJavaApplicationStub
 
@@ -56,9 +60,10 @@ universalJavaApplicationStub {
 }
 ```
 
+
 #### Argumente
 
-**compiled** (Optional)
+**compiled** (Optional, Default: `false`)
 :   Wenn *compiled == true*, dann wird die mit *csh* kompilierte Version des universalJavaApplicationStub heruntergeladen.
     Sonst wird die reine Shell-Version verwendet.
     Die kompilierte Version ist mit der Intel Toolchain kompiliert und somit nur auf Intel-Macs und auf AppleSilicon-Macs mit Rosetta ausführbar.
@@ -66,18 +71,16 @@ universalJavaApplicationStub {
 
     Wenn *compiled == true*, dann erwartet das Plugin einen zip-Download, den es entpackt, bei *false* einen direkten Download der ausführbaren Datei.
     Bei einem eigenen Downloadlink sollte diese Eigenschaft entsprechend gesetzt werden.
+    
 
-    Default: `false`
-
-**downloadURL** (Optional)
+**downloadURL** (Optional, Default: siehe unten)
 :   Die URL, von der das Programm heruntergeladen wird.
 
     Default bei *compiled == true*: "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"`
 
     Default bei *compiled == false*: `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"`
 
-**outdir** (Optional)
-:   Default: `"${buildDir}/universalJavaApplicationStub"`
+**outdir** (Optional, Default: `"${buildDir}/universalJavaApplicationStub"`)
 
 
 #### API-Doku
@@ -85,6 +88,7 @@ universalJavaApplicationStub {
 Die Output-Datei wird durch die Task-Eigenschaft *targetFile* beschrieben.
 Dieser ist in der Regel entweder *outdir/universalJavaApplicationStub* oder *outdir/universalJavaApplicationStub/universalJavaApplicationStub*.
 Hier ist ersteres das *targetFile* des Shell-Skripts und letzteres das des kompilierten Downloads.
+
 
 ### macApp
 
@@ -106,71 +110,122 @@ Es wird dann einfach ausgeführt mit
 ./gradlew macApp
 ```
 
+
 #### Argumente
 
-**appName**  (Optional)
+**appName** (Optional, Default: `${project.name}`)
 :   Der Name der *.app*-Datei ohne die Endung.
     Sollte auf macOS auch der Anzeigename sein.
 
-    Default: `${project.name}`
+**outdir** (Optional, Default: `"${buildDir}/unsignedMacApp"`)
 
-**outdir**  (Optional)
-:   Default: `"${buildDir}/unsignedMacApp"`
-
-**pkgInfoSignature**  (Optional)
+**pkgInfoSignature** (Optional, Default: automatisch berechnet)
 :   Paketsignatur für *PkgInfo*.
     [Doku](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPRuntimeConfig/Articles/ConfigApplications.html).
 
-    Default: automatisch berechnet
+    **Beispiel:** `"APPLpaco"`
 
-    Beispiel: `"APPLpaco"`
-
-**developmentRegion**  (Optional)
+**developmentRegion** (Optional, Default: `null`)
 :   Die Standardsprachregion des Programms.
     Sollte für pagina immer `"de"` sein.
 
-    Default: `null`
+    **Beispiele:** "de"`, `"en"`, …
 
-    Beispiele: "de"`, `"en"`, …
-
-**bundleIdentifier**  (Optional)
+**bundleIdentifier** (Optional, Default: automatisch aus Hauptklasse berechnet)
 :   ID für die App im reverse-URL format.
     Da Java eine ähnliche Notation für Klassen verwendet kann eine plausible Standardannahme getroffen werden.
     Ist die Hauptklasse zum Beipsiel *de.paginagmbh.parsx.console.Console*, so wird der BundleIdentifier `"de.paginagmbh.parsx.console"` (das selbe ohne die Klasse) berechnet.
 
-    Default: automatisch aus Hauptklasse berechnet
+    **Beispiel:** `"de.paginagmbh.parsx.console"`
 
-    Beispiel: `"de.paginagmbh.parsx.console"`
-
-**copyright**  (Optional)
+**copyright** (Optional, Default: `null`)
 :   Copyright-String.
 
-    Default: `null`
+    **Beispiel:** `"© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
 
-    Beispiel: `"© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
-
-**icon**  (Optional)
+**icon** (Optional, Default: `null`)
 :   Pfad zu einer *.icns*-Datei.
 
-    Beispiel: `"${projectDir}/src/build/icon.icns"`
+    **Beispiel:** `"${projectDir}/src/build/icon.icns"`
 
-**viewableDocumentTypes**  (Optional)
+**viewableDocumentTypes** (Optional, Default: `null`)
 :   UTIs verschiedener Dokumententypen, die in dieser app geöffnet werden können.
 
-    Default: `null`
+    **Beispiel:** `["public.plain-text", "public.log"]`
 
-    Beispiel: `["public.plain-text", "public.log"]`
 
 #### API-Doku
 
 Die Output-Datei wird durch die Task-Eigenschaft *macApp* beschrieben.
 Dieser ist in der Regel *outdir/appName.app*.
 
+
 ### signedAndNotarizedMacApp
 
-:::{caution}
-TODO ------------------------------------------------
-:::
+Signiert und notarisiert die macOS-App.
+Baut auf den *macApp*-Task auf.
+Alle Argumente, die angegeben werden müssen, können auch direkt über Umgebungsvariablen gesetzt werden, was CI-Integration erleichtern soll.
+
+
+#### Argumente
+
+**keychainName** (Optional, Default: `"TemporaryPaginaSigningKeychain.keychain"`)
+:   Name der temporären Keychain, die zum signieren verwendet wird.
+    Diese wird in der Regel nach Verwendung wieder gelöscht.
+    Diese Variable sollte auf `"login.keychain"` gesetzt werden, um die Systemkeychain zu verwenden.
+    Diese wird dann nicht gelöscht, kann das Zertifikat aber bereits enthalten.
+
+**keychainPassword** (Optional, Default: `"TotallySecretPassword"`)
+:   Das Passwort zu der Keychain.
+    Für die Login-Keychain sollte das das Computerpasswort sein.
+
+**certificate** (Optional, Default: env *$APPLE_SIGNING_P12* bzw. env *$APPLE_SIGNING_P12_BASE64*)
+:   Der Pfad zum Zertifikat das für signieren und notarisieren verwendet werden soll.
+    Wenn die Keychain nicht die Login-Keychain ist, dann wird es danach wieder aus der Keychain gelöscht.
+
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es standardmäßig aus der Umgebungsvariable *$APPLE_SIGNING_P12* gelesen.
+    Alternativ kann der base64-kodierte Inhalt des Zertifikats in *$APPLE_SIGNING_P12_BASE64* abgelegt werden.
+    Dies wird dann in den build-Ordner als Datei abgelegt.
+
+    Dieses Argument ist optional, wenn es nicht angegeben wird, wird kein Zertifikat importiert.
+
+**certificatePassword** (Optional, Default: env *$APPLE_SIGNING_PASSWORD* bzw. env *$APPLE_SIGNING_PASSWORD_BASE64*)
+:   Das Passwort für das importieren des P12-Zertifikats.
+    Wenn es nicht als Groovy-Argument angegeben wird, kann es entweder als plain-Text aus der *$APPLE_SIGNING_PASSWORD*-Variable gelesen werden oder base64-kodiert aus *$APPLE_SIGNING_PASSWORD_BASE64*.
+
+**appleSignID** (REQUIRED, Default: env *$APPLE_SIGN_ID*)
+:   Sign-ID die zum signieren verwendet wird.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_SIGN_ID*-Umgebungsvariable gelesen.
+
+    **Beispiel:** *"Developer ID Application: The Company (ASDF213FDSA)"*
+
+**appleIDUser** (REQUIRED, Default: env *$APPLE_ID_USER*)
+:   AppleID die zum signieren verwendet wird.
+    In der Regel im Format einer E-Mail–Adresse.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_USER*-Umgebungsvariable gelesen.
+
+**appleIDPassword** (REQUIRED, Default: env *$APPLE_ID_PASSWORD*)
+:   Das Passwort zur AppleID.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_PASSWORD*-Umgebungsvariable gelesen.
+
+**appleIDTeamID** (REQUIRED, Default: env *$APPLE_ID_TEAM_ID*)
+:   Die TeamID zur AppleID.
+    Sollte der Teil in Klammern in der *appleSignID* sein.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_TEAM_ID*-Umgebungsvariable gelesen.
+
+    **Beispiel:** *"ASDF213FDSA"*
+
+**dmgIcon** (Optional, Default: Die gleiche Datei wie das App-Icon der macOS-App)
+:   Das Icon das für die *.dmg*-Datei verwendet werden soll.
+
+**outdir** (Optional, Default: `"${buildDir}/signedMacApp"`)
+
+
+#### API-Doku
+
+Die Output-Dateien wird durch die Task-Eigenschaften *signedAndNotarizedMacApp* und *notarizedDMG* beschrieben.
+Dieser ist in der Regel *outdir/appName.app* und *outdir/appName.dmg*.
+
 
 ### shadowJar
 
@@ -188,6 +243,7 @@ shadowJar {
 
 Die Größe der Output-JAR zu (ca.) halbieren.
 
+
 ## Neue Versionen veröffentlichen
 
 Zurzeit hat das Plugin noch keine automatische Anpassung der Versionsnummern.
@@ -204,6 +260,7 @@ Zum lokalen Testen verwendet man
 ```sh
 ./gradlew publishToMavenLocal
 ```
+
 
 ## Todo
 

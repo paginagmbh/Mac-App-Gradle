@@ -67,14 +67,14 @@ public class SignAndNotarize extends DefaultTask {
 
   /**
    * The password to the AppleID used for code signing (customizable, auto). By default it is pulled
-   * from the environment variable named <em>$APPLE_SIGN_ID</em>.
+   * from the environment variable named <em>$APPLE_ID_PASSWORD</em>.
    */
   public String appleIDPassword = System.getenv("APPLE_ID_PASSWORD");
 
   /**
    * The TeamID of the AppleID used for signing and notarizing the app (customizable, auto). Default
-   * is read from the environment variable <em>APPLE_ID_TEAM_ID</em>. The parenthesized portion used
-   * in {@link appleSignID} should be the same.
+   * is read from the environment variable <em>$APPLE_ID_TEAM_ID</em>. The parenthesized part of the
+   * {@link appleSignID} should be the same.
    */
   public String appleIDTeamID = System.getenv("APPLE_ID_TEAM_ID");
 
@@ -337,6 +337,10 @@ public class SignAndNotarize extends DefaultTask {
   /** Import the signing certificate */
   private void importSigningCertificate() {
     headline("Importing Certificate");
+    if (certificate == null) {
+      logger.info("No certificate specified, skipping");
+      return;
+    }
     unlockKeychain();
     Shell.sh(
         "security",
