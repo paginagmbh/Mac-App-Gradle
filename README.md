@@ -49,41 +49,122 @@ Dieses Plugin besteht aus drei sub-Tasks, die in Reihenfolge abgehandelt werden.
 
 ```groovy
 universalJavaApplicationStub {
+    // Keine manuellen Angaben nötig. Das sind die Standardwerte:
 	compiled = false
 	downloadURL = "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"
-
 	outdir = "${buildDir}/universalJavaApplicationStub"
 }
 ```
 
-:::{table} Eigenschaften des *universalJavaApplicationStub*-Tasks
+#### Argumente
 
-| Name          | Verpflichtend | Default                                                                                                                                                                                                                                                               |
-|:--------------|:--------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| *compiled*    | Nein          | `false`                                                                                                                                                                                                                                                               |
-| *downloadURL* | Nein          | `"https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"` oder `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"` |
-| *outdir*      | Nein          | `"${buildDir}/universalJavaApplicationStub"`                                                                                                                                                                                                                          |
-:::
+**compiled** (Optional)
+:   Wenn *compiled == true*, dann wird die mit *csh* kompilierte Version des universalJavaApplicationStub heruntergeladen.
+    Sonst wird die reine Shell-Version verwendet.
+    Die kompilierte Version ist mit der Intel Toolchain kompiliert und somit nur auf Intel-Macs und auf AppleSilicon-Macs mit Rosetta ausführbar.
+    Dies ist unschön für die Anwendenden, die Shell-Version ist somit flexibler.
 
-Wenn *compiled == true*, dann wird die mit *csh* kompilierte Version des universalJavaApplicationStub heruntergeladen.
-Sonst wird die reine Shell-Version verwendet.
-Die kompilierte Version ist mit der Intel Toolchain kompiliert und somit nur auf Intel-Macs und auf AppleSilicon-Macs mit Rosetta ausführbar.
-Dies ist unschön für die Anwendenden, die Shell-Version ist somit flexibler.
+    Wenn *compiled == true*, dann erwartet das Plugin einen zip-Download, den es entpackt, bei *false* einen direkten Download der ausführbaren Datei.
+    Bei einem eigenen Downloadlink sollte diese Eigenschaft entsprechend gesetzt werden.
 
-Wenn *compiled == true*, dann erwartet das Plugin einen zip-Download, den es entpackt, bei *false* einen direkten Download der ausführbaren Datei.
-Bei einem eigenen Downloadlink sollte diese Eigenschaft entsprechend gesetzt werden.
+    Default: `false`
+
+**downloadURL** (Optional)
+:   Die URL, von der das Programm heruntergeladen wird.
+
+    Default bei *compiled == true*: "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"`
+
+    Default bei *compiled == false*: `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"`
+
+**outdir** (Optional)
+:   Default: `"${buildDir}/universalJavaApplicationStub"`
+
 
 #### API-Doku
 
 Die Output-Datei wird durch die Task-Eigenschaft *targetFile* beschrieben.
 Dieser ist in der Regel entweder *outdir/universalJavaApplicationStub* oder *outdir/universalJavaApplicationStub/universalJavaApplicationStub*.
-Hier ist ersteres das *targetFile* des Shell-Skripts und letzteres das des kompilierten Downloads
+Hier ist ersteres das *targetFile* des Shell-Skripts und letzteres das des kompilierten Downloads.
 
 ### macApp
 
-:::{caution}
-TODO ------------------------------------------------
-:::
+```groovy
+macApp {
+    appName = "Meine App"
+    developmentRegion = "de"
+    copyright = "© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
+    icon = "${projectDir}/src/build/icon.icns"
+}
+```
+
+Erzeugt eine ausführbare aber unsignierte macOS-App.
+Diese verwendet den  *universalJavaApplicationStub*-Task.
+Keine der Angaben ist notwendig, aber es empfiehlt sich zumindest die aus dem Codebeispiel oben zu verwenden.
+Es wird dann einfach ausgeführt mit
+
+```bash
+./gradlew macApp
+```
+
+#### Argumente
+
+**appName**  (Optional)
+:   Der Name der *.app*-Datei ohne die Endung.
+    Sollte auf macOS auch der Anzeigename sein.
+
+    Default: `${project.name}`
+
+**outdir**  (Optional)
+:   Default: `"${buildDir}/unsignedMacApp"`
+
+**pkgInfoSignature**  (Optional)
+:   Paketsignatur für *PkgInfo*.
+    [Doku](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPRuntimeConfig/Articles/ConfigApplications.html).
+
+    Default: automatisch berechnet
+
+    Beispiel: `"APPLpaco"`
+
+**developmentRegion**  (Optional)
+:   Die Standardsprachregion des Programms.
+    Sollte für pagina immer `"de"` sein.
+
+    Default: `null`
+
+    Beispiele: "de"`, `"en"`, …
+
+**bundleIdentifier**  (Optional)
+:   ID für die App im reverse-URL format.
+    Da Java eine ähnliche Notation für Klassen verwendet kann eine plausible Standardannahme getroffen werden.
+    Ist die Hauptklasse zum Beipsiel *de.paginagmbh.parsx.console.Console*, so wird der BundleIdentifier `"de.paginagmbh.parsx.console"` (das selbe ohne die Klasse) berechnet.
+
+    Default: automatisch aus Hauptklasse berechnet
+
+    Beispiel: `"de.paginagmbh.parsx.console"`
+
+**copyright**  (Optional)
+:   Copyright-String.
+
+    Default: `null`
+
+    Beispiel: `"© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
+
+**icon**  (Optional)
+:   Pfad zu einer *.icns*-Datei.
+
+    Beispiel: `"${projectDir}/src/build/icon.icns"`
+
+**viewableDocumentTypes**  (Optional)
+:   UTIs verschiedener Dokumententypen, die in dieser app geöffnet werden können.
+
+    Default: `null`
+
+    Beispiel: `["public.plain-text", "public.log"]`
+
+#### API-Doku
+
+Die Output-Datei wird durch die Task-Eigenschaft *macApp* beschrieben.
+Dieser ist in der Regel *outdir/appName.app*.
 
 ### signedAndNotarizedMacApp
 

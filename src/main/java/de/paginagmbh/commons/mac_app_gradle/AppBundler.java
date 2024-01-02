@@ -37,6 +37,8 @@ public class AppBundler extends DefaultTask {
   /**
    * The name of the app, without any extension (customizable, auto).
    *
+   * <p>Default: "${project.name}"
+   * 
    * <p>Used in the Info.plist as CFBundleDisplayName and CFBundleName.
    */
   public String appName = project.getName();
