@@ -30,8 +30,8 @@ application {
 macApp {
     appName = "Example App"
     developmentRegion = "de"
-    copyright = "© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
-    icon = "${projectDir}/src/build/icon.icns"
+    copyright = "© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
+    icon = "&dollar;{projectDir}/src/build/icon.icns"
 }
 ```
 
@@ -56,7 +56,7 @@ universalJavaApplicationStub {
     // Keine manuellen Angaben nötig. Das sind die Standardwerte:
 	compiled = false
 	downloadURL = "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"
-	outdir = "${buildDir}/universalJavaApplicationStub"
+	outdir = "&dollar;{buildDir}/universalJavaApplicationStub"
 }
 ```
 
@@ -80,7 +80,7 @@ universalJavaApplicationStub {
 
     Default bei *compiled == false*: `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"`
 
-**outdir** (Optional, Default: `"${buildDir}/universalJavaApplicationStub"`)
+**outdir** (Optional, Default: `"&dollar;{buildDir}/universalJavaApplicationStub"`)
 
 
 #### API-Doku
@@ -96,8 +96,8 @@ Hier ist ersteres das *targetFile* des Shell-Skripts und letzteres das des kompi
 macApp {
     appName = "Meine App"
     developmentRegion = "de"
-    copyright = "© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
-    icon = "${projectDir}/src/build/icon.icns"
+    copyright = "© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"
+    icon = "&dollar;{projectDir}/src/build/icon.icns"
 }
 ```
 
@@ -113,11 +113,11 @@ Es wird dann einfach ausgeführt mit
 
 #### Argumente
 
-**appName** (Optional, Default: `${project.name}`)
+**appName** (Optional, Default: `&dollar;{project.name}`)
 :   Der Name der *.app*-Datei ohne die Endung.
     Sollte auf macOS auch der Anzeigename sein.
 
-**outdir** (Optional, Default: `"${buildDir}/unsignedMacApp"`)
+**outdir** (Optional, Default: `"&dollar;{buildDir}/unsignedMacApp"`)
 
 **pkgInfoSignature** (Optional, Default: automatisch berechnet)
 :   Paketsignatur für *PkgInfo*.
@@ -141,12 +141,12 @@ Es wird dann einfach ausgeführt mit
 **copyright** (Optional, Default: `null`)
 :   Copyright-String.
 
-    **Beispiel:** `"© 2023–${java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
+    **Beispiel:** `"© 2023–&dollar;{java.time.Year.now().value} pagina GmbH, Tübingen, Germany"`
 
 **icon** (Optional, Default: `null`)
 :   Pfad zu einer *.icns*-Datei.
 
-    **Beispiel:** `"${projectDir}/src/build/icon.icns"`
+    **Beispiel:** `"&dollar;{projectDir}/src/build/icon.icns"`
 
 **viewableDocumentTypes** (Optional, Default: `null`)
 :   UTIs verschiedener Dokumententypen, die in dieser app geöffnet werden können.
@@ -161,6 +161,10 @@ Dieser ist in der Regel *outdir/appName.app*.
 
 
 ### signedAndNotarizedMacApp
+
+```bash
+./gradlew signedAndNotarizedMacApp
+```
 
 Signiert und notarisiert die macOS-App.
 Baut auf den *macApp*-Task auf.
@@ -179,46 +183,46 @@ Alle Argumente, die angegeben werden müssen, können auch direkt über Umgebung
 :   Das Passwort zu der Keychain.
     Für die Login-Keychain sollte das das Computerpasswort sein.
 
-**certificate** (Optional, Default: env *$APPLE_SIGNING_P12* bzw. env *$APPLE_SIGNING_P12_BASE64*)
+**certificate** (Optional, Default: env *&dollar;APPLE_SIGNING_P12* bzw. env *&dollar;APPLE_SIGNING_P12_BASE64*)
 :   Der Pfad zum Zertifikat das für signieren und notarisieren verwendet werden soll.
     Wenn die Keychain nicht die Login-Keychain ist, dann wird es danach wieder aus der Keychain gelöscht.
 
-    Wenn es nicht als Groovy-Argument angegeben wird, wird es standardmäßig aus der Umgebungsvariable *$APPLE_SIGNING_P12* gelesen.
-    Alternativ kann der base64-kodierte Inhalt des Zertifikats in *$APPLE_SIGNING_P12_BASE64* abgelegt werden.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es standardmäßig aus der Umgebungsvariable *&dollar;APPLE_SIGNING_P12* gelesen.
+    Alternativ kann der base64-kodierte Inhalt des Zertifikats in *&dollar;APPLE_SIGNING_P12_BASE64* abgelegt werden.
     Dies wird dann in den build-Ordner als Datei abgelegt.
 
     Dieses Argument ist optional, wenn es nicht angegeben wird, wird kein Zertifikat importiert.
 
-**certificatePassword** (Optional, Default: env *$APPLE_SIGNING_PASSWORD* bzw. env *$APPLE_SIGNING_PASSWORD_BASE64*)
+**certificatePassword** (Optional, Default: env *&dollar;APPLE_SIGNING_PASSWORD* bzw. env *&dollar;APPLE_SIGNING_PASSWORD_BASE64*)
 :   Das Passwort für das importieren des P12-Zertifikats.
-    Wenn es nicht als Groovy-Argument angegeben wird, kann es entweder als plain-Text aus der *$APPLE_SIGNING_PASSWORD*-Variable gelesen werden oder base64-kodiert aus *$APPLE_SIGNING_PASSWORD_BASE64*.
+    Wenn es nicht als Groovy-Argument angegeben wird, kann es entweder als plain-Text aus der *&dollar;APPLE_SIGNING_PASSWORD*-Variable gelesen werden oder base64-kodiert aus *&dollar;APPLE_SIGNING_PASSWORD_BASE64*.
 
-**appleSignID** (REQUIRED, Default: env *$APPLE_SIGN_ID*)
+**appleSignID** (REQUIRED, Default: env *&dollar;APPLE_SIGN_ID*)
 :   Sign-ID die zum signieren verwendet wird.
-    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_SIGN_ID*-Umgebungsvariable gelesen.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *&dollar;APPLE_SIGN_ID*-Umgebungsvariable gelesen.
 
     **Beispiel:** *"Developer ID Application: The Company (ASDF213FDSA)"*
 
-**appleIDUser** (REQUIRED, Default: env *$APPLE_ID_USER*)
+**appleIDUser** (REQUIRED, Default: env *&dollar;APPLE_ID_USER*)
 :   AppleID die zum signieren verwendet wird.
     In der Regel im Format einer E-Mail–Adresse.
-    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_USER*-Umgebungsvariable gelesen.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *&dollar;APPLE_ID_USER*-Umgebungsvariable gelesen.
 
-**appleIDPassword** (REQUIRED, Default: env *$APPLE_ID_PASSWORD*)
+**appleIDPassword** (REQUIRED, Default: env *&dollar;APPLE_ID_PASSWORD*)
 :   Das Passwort zur AppleID.
-    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_PASSWORD*-Umgebungsvariable gelesen.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *&dollar;APPLE_ID_PASSWORD*-Umgebungsvariable gelesen.
 
-**appleIDTeamID** (REQUIRED, Default: env *$APPLE_ID_TEAM_ID*)
+**appleIDTeamID** (REQUIRED, Default: env *&dollar;APPLE_ID_TEAM_ID*)
 :   Die TeamID zur AppleID.
     Sollte der Teil in Klammern in der *appleSignID* sein.
-    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *$APPLE_ID_TEAM_ID*-Umgebungsvariable gelesen.
+    Wenn es nicht als Groovy-Argument angegeben wird, wird es aus der *&dollar;APPLE_ID_TEAM_ID*-Umgebungsvariable gelesen.
 
     **Beispiel:** *"ASDF213FDSA"*
 
 **dmgIcon** (Optional, Default: Die gleiche Datei wie das App-Icon der macOS-App)
 :   Das Icon das für die *.dmg*-Datei verwendet werden soll.
 
-**outdir** (Optional, Default: `"${buildDir}/signedMacApp"`)
+**outdir** (Optional, Default: `"&dollar;{buildDir}/signedMacApp"`)
 
 
 #### API-Doku
