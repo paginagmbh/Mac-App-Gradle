@@ -14,6 +14,7 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.plugins.JavaApplication;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 /** Create a mac app file structure. */
@@ -38,7 +39,7 @@ public class AppBundler extends DefaultTask {
    * The name of the app, without any extension (customizable, auto).
    *
    * <p>Default: "${project.name}"
-   * 
+   *
    * <p>Used in the Info.plist as CFBundleDisplayName and CFBundleName.
    */
   public String appName = project.getName();
@@ -83,6 +84,12 @@ public class AppBundler extends DefaultTask {
   @OutputDirectory
   public File getMacApp() {
     return new File(outdir, appName + ".app");
+  }
+
+  /** The app bundle that is generated. */
+  @OutputFile
+  public File getMacAppZip() {
+    return new File(outdir, appName + ".zip");
   }
 
   /** The object to use for constructing the Info.plist file. */
@@ -228,5 +235,8 @@ public class AppBundler extends DefaultTask {
     } catch (TransformerException e) {
       e.printStackTrace();
     }
+
+    // Create a zip file for distribution
+    FileUtils.zip(app, getMacAppZip());
   }
 }

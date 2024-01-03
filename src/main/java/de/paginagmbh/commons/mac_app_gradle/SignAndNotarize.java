@@ -97,6 +97,12 @@ public class SignAndNotarize extends DefaultTask {
     return new File(outdir, getAppName() + ".dmg");
   }
 
+  /** A zip file containing the signed app. */
+  @OutputFile
+  public File getSignedAndNotarizedMacAppZip() {
+    return new File(outdir, getAppName() + ".zip");
+  }
+
   // ===============================================================================================
   // Methods To Fill Variables At Runtime
   // ===============================================================================================
@@ -493,6 +499,11 @@ public class SignAndNotarize extends DefaultTask {
     Shell.sh("xcrun", "stapler", "validate", appPath);
   }
 
+  /** Zip the mac app. */
+  private void zip() {
+    FileUtils.zip(getSignedAndNotarizedMacApp(), getSignedAndNotarizedMacAppZip());
+  }
+
   /**
    * Cleanup: Delete the certificate and the keychain to not leave any sensitive data accessible. In
    * case of a crash during the process, the cleanup should still be performed.
@@ -553,6 +564,7 @@ public class SignAndNotarize extends DefaultTask {
       codesignDmg();
       notarizeDmg();
       staple();
+      zip();
     } finally {
       // Perform cleanup at the end, even in case of an error.
       cleanup();

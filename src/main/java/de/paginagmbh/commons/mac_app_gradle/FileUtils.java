@@ -103,6 +103,52 @@ public class FileUtils {
         });
   }
 
+  /**
+   * Unzip an input file to a target.
+   *
+   * @param zipFile The input file to copy.
+   * @param unzippedFile The file once unzipped.
+   */
+  public static void unzip(File zipFile, File unzippedFile) {
+    project
+        .getAnt()
+        .invokeMethod(
+            "unzip",
+            Map.ofEntries(
+                entry("src", zipFile.getAbsolutePath()),
+                entry("dest", unzippedFile.getAbsolutePath())));
+  }
+
+  /**
+   * Zips a file or directory to a target.
+   *
+   * @param unzippedFile The input file to zip.
+   * @param zipFile The file once unzipped.
+   */
+  public static void zip(File unzippedFile, File zipFile) {
+    project
+        .getAnt()
+        .invokeMethod(
+            "zip",
+            Map.ofEntries(
+                // Base directory is parent directory since I do want to contain the actual .app-dir
+                // in the archive, not have the app be the root directory itself.
+                // This then requires the slightly ugly hack with the includes, where I
+                // 1)  Have to replace any space by a '?' since ant will otherwise decide that it is
+                //     an argument separator (I have tried everything, trust me). So I match for any
+                //     character here – and might possibly also include other erroneous files. (Even
+                //     if the probability of that is low)
+                // 2)  I have to append a "/**/*" to each directory to also include sub-files.
+                entry("basedir", unzippedFile.getParentFile().getAbsolutePath()),
+                entry(
+                    "includes",
+                    unzippedFile.getName().replace(' ', '?')
+                        + (unzippedFile.isDirectory()
+                            ? File.separator + "**" + File.separator + "*"
+                            : "")),
+                entry("destfile", zipFile.getAbsolutePath())));
+  }
+
   /** Write a string to a text file that does not yet need to exist. */
   public static void writeToFile(File file, String content) throws IOException {
     file.createNewFile();

@@ -156,8 +156,8 @@ Es wird dann einfach ausgeführt mit
 
 #### API-Doku
 
-Die Output-Datei wird durch die Task-Eigenschaft *macApp* beschrieben.
-Dieser ist in der Regel *outdir/appName.app*.
+Die Output-Dateien werden durch die Task-Eigenschaften *macApp* und *macAppZip* beschrieben.
+Dieser sind  *outdir/appName.app* und *outdir/appName.zip*.
 
 
 ### signedAndNotarizedMacApp
