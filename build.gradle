@@ -14,26 +14,26 @@ plugins {
     id 'eclipse'
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '1.2.1'
-}  
+}
 
 dependencies {
     runtimeOnly 'com.github.johnrengelman:shadow:8.1.1' // bundle all jars into one
 }
 
 group = "de.paginagmbh.commons"
-version = "1.0.0-SNAPSHOT"
+version = "1.0.0"
 
 gradlePlugin {
-    website = 'https://code.pagina.gmbh/parsx/mac-app-gradle' 
-    vcsUrl = 'https://code.pagina.gmbh/parsx/mac-app-gradle' 
+    website = 'https://code.pagina.gmbh/parsx/mac-app-gradle'
+    vcsUrl = 'https://code.pagina.gmbh/parsx/mac-app-gradle'
 
     plugins {
         myPlugins {
             id = 'de.paginagmbh.commons.mac-app-gradle'
             implementationClass = 'de.paginagmbh.commons.mac_app_gradle.GenerateMacAppPlugin'
-            displayName = 'Mac App Bundler and Signer Gradle Plugin' 
-            description = 'Create a Mac App for java source, sign and notarize it.' 
-            tags.set(['macOS', 'mac', 'codesign', 'sign', 'notarize']) 
+            displayName = 'Mac App Bundler and Signer Gradle Plugin'
+            description = 'Create a Mac App for java source, sign and notarize it.'
+            tags.set(['macOS', 'mac', 'codesign', 'sign', 'notarize'])
         }
     }
 }
@@ -44,7 +44,7 @@ publishing {
             def releasesRepoUrl = "${artifactory_url}/plugins-release-local"
             def snapshotsRepoUrl = "${artifactory_url}/plugins-snapshot-local"
             url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            name = version.endsWith('SNAPSHOT') ? "pagina-Artifactory-Local-Plugins-Released" : "pagina-Artifactory-Local-Plugins-Snapshots" 
+            name = version.endsWith('SNAPSHOT') ? "pagina-Artifactory-Local-Plugins-Released" : "pagina-Artifactory-Local-Plugins-Snapshots"
             credentials {
                 username = "${artifactory_user}"
                 password = "${artifactory_password}"

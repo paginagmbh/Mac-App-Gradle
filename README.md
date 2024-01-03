@@ -340,3 +340,4 @@ Zum lokalen Testen verwendet man
 - [ ] Versionsnummern von selbst inkrementieren.
     Idealerweise im Rahmen eines eigenen Paketes.
     Dabei kann zum Beispiel auf [diese SO-Antwort](https://stackoverflow.com/a/39832633) aufgebaut werden.
+- [ ] Automatisches Release bei push auf main.
