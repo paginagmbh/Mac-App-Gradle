@@ -132,7 +132,7 @@ public class FileUtils {
             //     separator between paremeters. (I have tried everything, trust me). So I match for
             //     any character here – and might possibly also include other erroneous files. (Even
             //     if the probability of that is low)
-            // 2)  I have to append a "/**/*" to each directory to also include sub-files.
+            // 2)  I have to append a "/ ** / *" to each directory to also include sub-files.
             entry("basedir", unzippedFile.getParentFile().getAbsolutePath()),
             entry(
                 "includes",
@@ -150,6 +150,19 @@ public class FileUtils {
    * @param outfile The file once archived.
    */
   public static void tarGz(File infile, File outfile) {
+    Shell.sh(
+        "tar",
+        "-czv",
+        // Output file
+        "-f",
+        outfile.getAbsolutePath(),
+        // Go to that directory so that our relative paths work
+        "-C",
+        infile.getParentFile().getAbsolutePath(),
+        // File to compress
+        infile.getName());
+    /* ANT DOES NOT PRESERVE FILE PERMISSIONS – WHICH WAS THE WHOLE REASON WE WERE DOING THIS THING
+     * IN THE FIRST PLACE
     ant.invokeMethod(
         "tar",
         Map.ofEntries(
@@ -160,7 +173,7 @@ public class FileUtils {
             //     separator between paremeters. (I have tried everything, trust me). So I match for
             //     any character here – and might possibly also include other erroneous files. (Even
             //     if the probability of that is low)
-            // 2)  I have to append a "/**/*" to each directory to also include sub-files.
+            // 2)  I have to append a "/ ** / *" to each directory to also include sub-files.
             entry("basedir", infile.getParentFile().getAbsolutePath()),
             entry(
                 "includes",
@@ -168,6 +181,7 @@ public class FileUtils {
                     + (infile.isDirectory() ? File.separator + "**" + File.separator + "*" : "")),
             entry("destfile", outfile.getAbsolutePath()),
             entry("compression", "gzip")));
+     */
   }
 
   /** Write a string to a text file that does not yet need to exist. */
