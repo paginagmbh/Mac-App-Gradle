@@ -97,10 +97,10 @@ public class SignAndNotarize extends DefaultTask {
     return new File(outdir, getAppName() + ".dmg");
   }
 
-  /** A zip file containing the signed app. */
+  /** A tar.gz file containing the signed app. */
   @OutputFile
-  public File getSignedAndNotarizedMacAppZip() {
-    return new File(outdir, getAppName() + ".zip");
+  public File getSignedAndNotarizedMacAppTarGz() {
+    return new File(outdir, getAppName() + ".tar.gz");
   }
 
   // ===============================================================================================
@@ -499,9 +499,9 @@ public class SignAndNotarize extends DefaultTask {
     Shell.sh("xcrun", "stapler", "validate", appPath);
   }
 
-  /** Zip the mac app. */
-  private void zip() {
-    FileUtils.zip(getSignedAndNotarizedMacApp(), getSignedAndNotarizedMacAppZip());
+  /** Archive the mac app. */
+  private void archive() {
+    FileUtils.tarGz(getSignedAndNotarizedMacApp(), getSignedAndNotarizedMacAppTarGz());
   }
 
   /**
@@ -564,7 +564,7 @@ public class SignAndNotarize extends DefaultTask {
       codesignDmg();
       notarizeDmg();
       staple();
-      zip();
+      archive();
     } finally {
       // Perform cleanup at the end, even in case of an error.
       cleanup();

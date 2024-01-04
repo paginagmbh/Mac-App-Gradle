@@ -88,8 +88,8 @@ public class AppBundler extends DefaultTask {
 
   /** The app bundle that is generated. */
   @OutputFile
-  public File getMacAppZip() {
-    return new File(outdir, appName + ".zip");
+  public File getMacAppTarGz() {
+    return new File(outdir, appName + ".tar.gz");
   }
 
   /** The object to use for constructing the Info.plist file. */
@@ -237,6 +237,6 @@ public class AppBundler extends DefaultTask {
     }
 
     // Create a zip file for distribution
-    FileUtils.zip(app, getMacAppZip());
+    FileUtils.tarGz(app, getMacAppTarGz());
   }
 }

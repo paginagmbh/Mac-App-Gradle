@@ -110,6 +110,7 @@ Es wird dann einfach ausgeführt mit
 ./gradlew macApp
 ```
 
+Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie als einzelne Datei übertragen werden kann, aber Dateiberechtigungen intern beibehält. 
 
 #### Argumente
 
@@ -156,8 +157,8 @@ Es wird dann einfach ausgeführt mit
 
 #### API-Doku
 
-Die Output-Dateien werden durch die Task-Eigenschaften *macApp* und *macAppZip* beschrieben.
-Dieser sind  *outdir/appName.app* und *outdir/appName.zip*.
+Die Output-Dateien werden durch die Task-Eigenschaften *macApp* und *macAppTarGz* beschrieben.
+Dieser sind  *outdir/appName.app* und *outdir/appName.tar.gz*.
 
 
 ### signedAndNotarizedMacApp
@@ -227,8 +228,8 @@ Alle Argumente, die angegeben werden müssen, können auch direkt über Umgebung
 
 #### API-Doku
 
-Die Output-Dateien wird durch die Task-Eigenschaften *signedAndNotarizedMacApp* und *notarizedDMG* beschrieben.
-Dieser ist in der Regel *outdir/appName.app* und *outdir/appName.dmg*.
+Die Output-Dateien wird durch die Task-Eigenschaften *signedAndNotarizedMacApp*, *signedAndNotarizedMacAppTarGz* und *notarizedDMG* beschrieben.
+Dieser ist in der Regel *outdir/appName.app*, *outdir/appName.tar.gz* und *outdir/appName.dmg*.
 
 
 ### shadowJar

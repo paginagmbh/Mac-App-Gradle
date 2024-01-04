@@ -27,10 +27,12 @@ import org.gradle.api.Project;
  */
 public class FileUtils {
   private static Project project;
+  private static org.gradle.api.AntBuilder ant;
 
   /** Set the project object so that ant can be used. */
   public static void setProject(Project project) {
     FileUtils.project = project;
+    FileUtils.ant = project.getAnt();
   }
 
   /**
@@ -40,15 +42,13 @@ public class FileUtils {
    * @param output The directory it is copied into.
    */
   public static void copyToDir(File input, File output) {
-    project
-        .getAnt()
-        .invokeMethod(
-            "copy",
-            Map.ofEntries(
-                entry("file", input.getAbsolutePath()),
-                entry("todir", output.getAbsolutePath()),
-                entry("force", "true"),
-                entry("overwrite", "true")));
+    ant.invokeMethod(
+        "copy",
+        Map.ofEntries(
+            entry("file", input.getAbsolutePath()),
+            entry("todir", output.getAbsolutePath()),
+            entry("force", "true"),
+            entry("overwrite", "true")));
   }
 
   /**
@@ -58,15 +58,13 @@ public class FileUtils {
    * @param output The file it will be after copying.
    */
   public static void copyToFile(File input, File output) {
-    project
-        .getAnt()
-        .invokeMethod(
-            "copy",
-            Map.ofEntries(
-                entry("file", input.getAbsolutePath()),
-                entry("tofile", output.getAbsolutePath()),
-                entry("force", "true"),
-                entry("overwrite", "true")));
+    ant.invokeMethod(
+        "copy",
+        Map.ofEntries(
+            entry("file", input.getAbsolutePath()),
+            entry("tofile", output.getAbsolutePath()),
+            entry("force", "true"),
+            entry("overwrite", "true")));
   }
 
   /**
@@ -110,43 +108,66 @@ public class FileUtils {
    * @param unzippedFile The file once unzipped.
    */
   public static void unzip(File zipFile, File unzippedFile) {
-    project
-        .getAnt()
-        .invokeMethod(
-            "unzip",
-            Map.ofEntries(
-                entry("src", zipFile.getAbsolutePath()),
-                entry("dest", unzippedFile.getAbsolutePath())));
+    ant.invokeMethod(
+        "unzip",
+        Map.ofEntries(
+            entry("src", zipFile.getAbsolutePath()),
+            entry("dest", unzippedFile.getAbsolutePath())));
   }
 
   /**
    * Zips a file or directory to a target.
    *
    * @param unzippedFile The input file to zip.
-   * @param zipFile The file once unzipped.
+   * @param zipFile The file once zipped.
    */
   public static void zip(File unzippedFile, File zipFile) {
-    project
-        .getAnt()
-        .invokeMethod(
-            "zip",
-            Map.ofEntries(
-                // Base directory is parent directory since I do want to contain the actual .app-dir
-                // in the archive, not have the app be the root directory itself.
-                // This then requires the slightly ugly hack with the includes, where I
-                // 1)  Have to replace any space by a '?' since ant will otherwise decide that it is
-                //     an argument separator (I have tried everything, trust me). So I match for any
-                //     character here – and might possibly also include other erroneous files. (Even
-                //     if the probability of that is low)
-                // 2)  I have to append a "/**/*" to each directory to also include sub-files.
-                entry("basedir", unzippedFile.getParentFile().getAbsolutePath()),
-                entry(
-                    "includes",
-                    unzippedFile.getName().replace(' ', '?')
-                        + (unzippedFile.isDirectory()
-                            ? File.separator + "**" + File.separator + "*"
-                            : "")),
-                entry("destfile", zipFile.getAbsolutePath())));
+    ant.invokeMethod(
+        "zip",
+        Map.ofEntries(
+            // Base directory is parent directory since you do want to contain the actually intended
+            // directory in the archive, not have the app be the root directory itself.
+            // This then requires the slightly ugly hack with the includes, where I
+            // 1)  Have to replace any space with a '?' since ant will otherwise decide that it is a
+            //     separator between paremeters. (I have tried everything, trust me). So I match for
+            //     any character here – and might possibly also include other erroneous files. (Even
+            //     if the probability of that is low)
+            // 2)  I have to append a "/**/*" to each directory to also include sub-files.
+            entry("basedir", unzippedFile.getParentFile().getAbsolutePath()),
+            entry(
+                "includes",
+                unzippedFile.getName().replace(' ', '?')
+                    + (unzippedFile.isDirectory()
+                        ? File.separator + "**" + File.separator + "*"
+                        : "")),
+            entry("destfile", zipFile.getAbsolutePath())));
+  }
+
+  /**
+   * Creates a tar.gz archive.
+   *
+   * @param infile The input file to archive.
+   * @param outfile The file once archived.
+   */
+  public static void tarGz(File infile, File outfile) {
+    ant.invokeMethod(
+        "tar",
+        Map.ofEntries(
+            // Base directory is parent directory since you do want to contain the actually intended
+            // directory in the archive, not have the app be the root directory itself.
+            // This then requires the slightly ugly hack with the includes, where I
+            // 1)  Have to replace any space with a '?' since ant will otherwise decide that it is a
+            //     separator between paremeters. (I have tried everything, trust me). So I match for
+            //     any character here – and might possibly also include other erroneous files. (Even
+            //     if the probability of that is low)
+            // 2)  I have to append a "/**/*" to each directory to also include sub-files.
+            entry("basedir", infile.getParentFile().getAbsolutePath()),
+            entry(
+                "includes",
+                infile.getName().replace(' ', '?')
+                    + (infile.isDirectory() ? File.separator + "**" + File.separator + "*" : "")),
+            entry("destfile", outfile.getAbsolutePath()),
+            entry("compression", "gzip")));
   }
 
   /** Write a string to a text file that does not yet need to exist. */
