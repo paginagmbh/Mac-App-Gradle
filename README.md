@@ -248,6 +248,10 @@ shadowJar {
 
 Die Größe der Output-JAR zu (ca.) halbieren.
 
+:::{warning}
+Mit bestimmten Paketen kann es mit *minimize* zu Problemen kommen.
+Insbesondere eine Kombination aus launch4j und FlatLaf hat mit minimize zu einer kaputten Exe geführt, die aber ohne minimize funktionierte.
+:::
 
 ## errSecInternalComponent
 

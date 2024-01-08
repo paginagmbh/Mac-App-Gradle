@@ -2,7 +2,6 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
         gradlePluginPortal()
     }
     dependencies {
@@ -41,10 +40,8 @@ gradlePlugin {
 publishing {
     repositories {
         maven {
-            def releasesRepoUrl = "${artifactory_url}/plugins-release-local"
-            def snapshotsRepoUrl = "${artifactory_url}/plugins-snapshot-local"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            name = version.endsWith('SNAPSHOT') ? "pagina-Artifactory-Local-Plugins-Released" : "pagina-Artifactory-Local-Plugins-Snapshots"
+            url = version.endsWith('SNAPSHOT') ? "${artifactory_url}/plugins-snapshot-local" : "${artifactory_url}/plugins-release-local"
+            name = version.endsWith('SNAPSHOT') ? "PaginaArtifactoryLocalPluginsSnapshots" : "PaginaArtifactoryLocalPluginsReleased"
             credentials {
                 username = "${artifactory_user}"
                 password = "${artifactory_password}"
