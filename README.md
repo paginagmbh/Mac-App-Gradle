@@ -112,6 +112,7 @@ Es wird dann einfach ausgeführt mit
 
 Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie als einzelne Datei übertragen werden kann, aber Dateiberechtigungen intern beibehält. 
 
+
 #### Argumente
 
 **appName** (Optional, Default: `${project.name}`)
@@ -253,11 +254,21 @@ Mit bestimmten Paketen kann es mit *minimize* zu Problemen kommen.
 Insbesondere eine Kombination aus launch4j und FlatLaf hat mit minimize zu einer kaputten Exe geführt, die aber ohne minimize funktionierte.
 :::
 
+
 ## errSecInternalComponent
 
 Dies ist ein Fehler, der manchmal auftritt.
 Bisher war das nur, nachdem wiederholt über SSH auf einem Mac getested wurde.
 Dieser Fehler kann nur durch einen Neustart behoben werden.
+
+
+## .tgz und .tar.gz
+
+Die generierten Archive sind *.tgz*-Dateien, nicht *.tar.gz.*
+Diese Endungen sind gleichbedeutend.
+Jedoch haben Windows und Artifactory Probleme mit Mehr-Komponenten-Endungen.
+Artifactory entfernt zum Beispiel die *.tar*-Komponente einfach.
+Um eindeutig zu bleiben wird somit *.tgz* verwendet, auch wenn im Code manche Variablen und Funktionen noch von „TarGz“ reden.
 
 
 ## Variablenwiederverwendung – displayname
@@ -321,6 +332,7 @@ public static final String version = meta.getString("version");
 public static final String name = meta.getString("name");
 
 ```
+
 
 ## Neue Versionen veröffentlichen
 

@@ -100,7 +100,7 @@ public class SignAndNotarize extends DefaultTask {
   /** A tar.gz file containing the signed app. */
   @OutputFile
   public File getSignedAndNotarizedMacAppTarGz() {
-    return new File(outdir, getAppName() + ".tar.gz");
+    return new File(outdir, getAppName() + ".tgz");
   }
 
   // ===============================================================================================

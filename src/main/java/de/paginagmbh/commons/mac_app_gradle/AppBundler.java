@@ -89,7 +89,7 @@ public class AppBundler extends DefaultTask {
   /** The app bundle that is generated. */
   @OutputFile
   public File getMacAppTarGz() {
-    return new File(outdir, appName + ".tar.gz");
+    return new File(outdir, appName + ".tgz");
   }
 
   /** The object to use for constructing the Info.plist file. */
