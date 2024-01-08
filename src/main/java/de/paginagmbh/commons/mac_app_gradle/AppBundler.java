@@ -20,6 +20,14 @@ import org.gradle.api.tasks.TaskAction;
 /** Create a mac app file structure. */
 public class AppBundler extends DefaultTask {
 
+  public String getDescription() {
+    return "Create an unsigned mac .app bundle.";
+  }
+
+  public String getGroup() {
+    return "Make Mac App";
+  }
+
   /** Get the {@link Project} in slightly less time, effort, and characters. */
   private Project project = getProject();
 

@@ -24,6 +24,16 @@ import org.gradle.api.tasks.TaskAction;
 /** The task that signs and notarizes the mac app. Only works on macOS. */
 public class SignAndNotarize extends DefaultTask {
 
+  /** The description of this gradle task. */
+  public String getDescription() {
+    return "Sign and notarize the mac .app bundle.";
+  }
+
+  /** The Gradle task group description this task belongs to. */
+  public String getGroup() {
+    return "Make Mac App";
+  }
+
   /**
    * The name of the keychain used to hold the variable (customizable, auto). If not overwritten, it
    * generates a default one with a unique name that is deleted after use. However, one can also set

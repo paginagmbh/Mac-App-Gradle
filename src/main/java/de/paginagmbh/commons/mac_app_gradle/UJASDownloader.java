@@ -14,15 +14,25 @@ import org.gradle.api.tasks.TaskAction;
 /** Download the universalJavaApplicationStub. */
 public class UJASDownloader extends DefaultTask {
 
+  /** The Gradle task group description this task belongs to. */
+  public String getGroup() {
+    return "Make Mac App";
+  }
+
+  /** The description of this gradle task. */
+  public String getDescription() {
+    return "Download the universalJavaApplicationStub required for the app.";
+  }
+
   /** URL if the compiled version should be downloaded in a zip. */
   private final String compiledDownloadURL =
       "https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip";
 
-  /** URL if the shell version should be downloaded directly. */
+      /** URL if the shell version should be downloaded directly. */
   private final String shellDownloadURL =
       "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub";
 
-  /** The URL to download the file from, if it is overwritten by the user. */
+      /** The URL to download the file from, if it is overwritten by the user. */
   private String _downloadURL = null;
 
   /**
@@ -56,7 +66,6 @@ public class UJASDownloader extends DefaultTask {
           .get()
           .getAsFile()
           .getAbsolutePath();
-
   private final String unzippedName = getFileName();
   private final String ujasName = "universalJavaApplicationStub";
 
@@ -85,7 +94,7 @@ public class UJASDownloader extends DefaultTask {
         : download.substring(0, download.lastIndexOf("."));
   }
 
-  /** Get the name of the zip archive */
+  /** Get the name of the zip archive  */
   private String getDownloadName() {
     String[] components = getDownloadURL().split("/");
     return components[components.length - 1];
@@ -102,6 +111,17 @@ public class UJASDownloader extends DefaultTask {
                 entry("dest", compiled ? outdir : getTargetFile())));
   }
 
+  /** Unzip the zip file. */
+  private void unzip() {
+    getProject()
+        .getAnt()
+        .invokeMethod(
+            "unzip",
+            Map.ofEntries(
+                entry("src", getZipFile().getAbsolutePath()),
+                entry("dest", getUnzippedFile().getAbsolutePath())));
+  }
+
   /** Perform the plugin action. */
   @TaskAction
   public void taskAction() {
@@ -114,7 +134,7 @@ public class UJASDownloader extends DefaultTask {
       // Download the file. Duh.
       download();
       // Unzip it, if the compiled archive is downloaded. Shell file is downloaded without zip.
-      if (compiled) FileUtils.unzip(getZipFile(), getUnzippedFile());
+      if (compiled) unzip();
     }
   }
 }
