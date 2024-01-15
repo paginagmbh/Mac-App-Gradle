@@ -22,7 +22,7 @@ dependencies {
 }
 
 group = "de.paginagmbh.commons"
-version = "1.2.4"
+version = "1.2.5-SNAPSHOT"
 
 gradlePlugin {
     website = 'https://code.pagina.gmbh/parsx/mac-app-gradle'
