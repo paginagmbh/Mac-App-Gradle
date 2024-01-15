@@ -6,6 +6,9 @@ Muss auf einem Mac ausgeführt werden[^unix].
 [^unix]: Eine unsignierte Mac App kann auf auf Linux/WSL erzeugt werden.
 
 
+[[_TOC_]]
+
+
 ## Verwendung
 
 
