@@ -436,12 +436,17 @@ public class SignAndNotarize extends DefaultTask {
     headline("Create DMG");
     // Install the required tools, if they are not already installed.
     ensureElectronInstallerDMG();
+    String titleCandidate = getAppName() + ' ' + getProject().getVersion().toString();
+    if (titleCandidate.length() > 27 && titleCandidate.contains("-SNAPSHOT"))
+      titleCandidate = titleCandidate.replace("-SNAPSHOT", "β");
+    if (titleCandidate.length() > 26) // Worried about unicode here so one character of margin
+    titleCandidate = titleCandidate.substring(0, 26);
     // Different calls with or without icon.
     if (dmgIcon == null)
       Shell.sh(
           "electron-installer-dmg",
           "--title",
-          getAppName() + ' ' + getProject().getVersion().toString(),
+          titleCandidate,
           "--out",
           outdir.getAbsolutePath(),
           "--overwrite",
@@ -451,7 +456,7 @@ public class SignAndNotarize extends DefaultTask {
       Shell.sh(
           "electron-installer-dmg",
           "--title",
-          getAppName() + ' ' + getProject().getVersion().toString(),
+          titleCandidate,
           "--out",
           outdir.getAbsolutePath(),
           "--icon",
