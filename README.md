@@ -134,7 +134,7 @@ Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie a
 :   Die Standardsprachregion des Programms.
     Sollte für pagina immer `"de"` sein.
 
-    **Beispiele:** "de"`, `"en"`, …
+    **Beispiele:** `"de"`, `"en"`, …
 
 **bundleIdentifier** (Optional, Default: automatisch aus Hauptklasse berechnet)
 :   ID für die App im reverse-URL format.

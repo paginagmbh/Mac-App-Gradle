@@ -1,0 +1,17 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+*.bat  eol=crlf
+*.gradle  eol=lf
+*.java  eol=lf
+*.md  eol=lf
+*.sh  eol=lf
+*.txt  eol=lf
+*.xml  eol=lf
+*.yml  eol=lf
+.gitattributes  eol=lf
+.gitignore  eol=lf
+*.properties  eol=lf
+.editorconfig  eol=lf
+.gitmodules  eol=lf
+gradlew  eol=lf
