@@ -18,7 +18,7 @@ plugins {
     id 'java'
     id 'application'
 
-    id 'de.paginagmbh.commons.mac-app-gradle' version '1.0.0-SNAPSHOT'
+    id 'de.paginagmbh.commons.mac-app-gradle' version '1.2.4-SNAPSHOT'
 }
 
 version = "1.0.0"
@@ -336,10 +336,9 @@ public static final String name = meta.getString("name");
 
 ## Neue Versionen veröffentlichen
 
-Zurzeit hat das Plugin noch keine automatische Anpassung der Versionsnummern.
-Dies muss also in *build.gradle* manuell vollzogen werden.
-
-Zum hochladen auf Artifactory reicht
+Ein merge auf *main* veröffentlich automatisch die nächste Version auf Artifactory.
+Ein push auf *development* veröffentlicht stattdessen eine *-SNAPSHOT*-Version.
+Man kann jedoch auch lokal auf Artifactory veröffentlichen
 
 ```sh
 ./gradlew publish
@@ -350,11 +349,3 @@ Zum lokalen Testen verwendet man
 ```sh
 ./gradlew publishToMavenLocal
 ```
-
-
-## Todo
-
-- [ ] Versionsnummern von selbst inkrementieren.
-    Idealerweise im Rahmen eines eigenen Paketes.
-    Dabei kann zum Beispiel auf [diese SO-Antwort](https://stackoverflow.com/a/39832633) aufgebaut werden.
-- [ ] Automatisches Release bei push auf main.

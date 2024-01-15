@@ -13,6 +13,8 @@ plugins {
     id 'eclipse'
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '1.2.1'
+
+    id 'de.paginagmbh.commons.gradle-release-tools' version '1.0.1'
 }
 
 dependencies {
@@ -20,7 +22,7 @@ dependencies {
 }
 
 group = "de.paginagmbh.commons"
-version = "1.2.0"
+version = "1.2.4-SNAPSHOT"
 
 gradlePlugin {
     website = 'https://code.pagina.gmbh/parsx/mac-app-gradle'
@@ -30,22 +32,28 @@ gradlePlugin {
         myPlugins {
             id = 'de.paginagmbh.commons.mac-app-gradle'
             implementationClass = 'de.paginagmbh.commons.mac_app_gradle.GenerateMacAppPlugin'
-            displayName = 'Mac App Bundler and Signer Gradle Plugin'
+            displayName = 'Mac App Bundler and Signer'
             description = 'Create a Mac App for java source, sign and notarize it.'
             tags.set(['macOS', 'mac', 'codesign', 'sign', 'notarize'])
         }
     }
 }
 
+def artifactory_url = "https://bintray.pagina.gmbh/artifactory"
 publishing {
     repositories {
         maven {
             url = version.endsWith('SNAPSHOT') ? "${artifactory_url}/plugins-snapshot-local" : "${artifactory_url}/plugins-release-local"
             name = version.endsWith('SNAPSHOT') ? "PaginaArtifactoryLocalPluginsSnapshots" : "PaginaArtifactoryLocalPluginsReleased"
             credentials {
-                username = "${artifactory_user}"
-                password = "${artifactory_password}"
+                username = System.getenv("ARTIFACTORY_USER")
+                password = System.getenv("ARTIFACTORY_PASSWORD")
             }
         }
     }
+}
+
+
+updateVersionNumberInReadme {
+    pluginId = "de.paginagmbh.commons.mac-app-gradle"
 }

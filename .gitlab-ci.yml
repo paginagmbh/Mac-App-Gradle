@@ -1,0 +1,65 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  # Disable the Gradle daemon for Continuous Integration servers as correctness
+  # is usually a priority over speed in CI environments. Using a fresh
+  # runtime for each build is more reliable since the runtime is completely
+  # isolated from any previous builds.
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+
+# Cache downloaded dependencies and plugins between builds
+# and use our global maven cache 'one-maven-cache-to-rule-them-all'
+cache:
+  key: one-parsx-cache-to-rule-them-all
+  untracked: false
+  paths:
+    - .m2/repository
+    - .gradle/
+
+
+.gradle_template:
+  image: gradle:8.4-jdk21-jammy
+  except:
+    - tags
+  before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+    - mkdir -p $GRADLE_USER_HOME || true
+    - cp .gitlab-ci/artifactory-access/init.gradle $GRADLE_USER_HOME
+
+
+deploy:artifactory:
+  extends: .gradle_template
+  script:
+    - ./gradlew publish
+
+
+git:release:
+  extends: .gradle_template
+  only:
+    - main
+  script:
+    # Only perform the branching when this is SNAPSHOT version on the main branch.
+    - if [[ ! ($(./gradlew properties | grep version) =~ "SNAPSHOT") ]]; then exit 0; fi
+    # Create a new commit on the main branch
+    - ./gradlew configureReleaseBot
+      removeSnapshotFromVersion
+      updateVersionNumberInReadme
+      gitCommitForRelease
+      createGitTagForVersion
+      gitPush
+
+
+git:preparesnapshot:
+  extends: .gradle_template
+  only:
+    - main
+  script:
+    # Only perform the branching when this is not a SNAPSHOT version on the main branch.
+    - if [[ ($(./gradlew properties | grep version) =~ "SNAPSHOT") ]]; then exit 0; fi
+    # Create a new commit on the development branch for the next version
+    - ./gradlew configureReleaseBot
+      switchToDevelopmentAndCatchItUp
+      prepareNextSnapshotVersion
+      updateVersionNumberInReadme
+      gitCommitForSnapshot
+      gitPush
