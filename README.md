@@ -3,7 +3,7 @@
 Ein Gradle-Plugin, das Mac Apps erzeugt und signiert.
 Muss auf einem Mac ausgeführt werden[^unix].
 
-[^unix]: Eine unsignierte Mac App kann auf auf Linux/WSL erzeugt werden.
+[^unix]: Eine unsignierte Mac App kann auch auf Linux/WSL erzeugt werden.
 
 
 [[_TOC_]]
