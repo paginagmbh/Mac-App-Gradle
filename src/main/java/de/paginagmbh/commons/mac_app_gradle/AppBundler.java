@@ -223,6 +223,7 @@ public class AppBundler extends DefaultTask {
     infoPlist.createEntry("CFBundleDevelopmentRegion", developmentRegion);
     infoPlist.createEntry("NSHumanReadableCopyright", copyright);
     infoPlist.createEntry("CFBundleIconFile", iconName);
+    infoPlist.createEntry("NSHighResolutionCapable", true);
     // Settings for files that can be opened in said app.
     if (viewableDocumentTypes != null)
       infoPlist.documentTypes(
