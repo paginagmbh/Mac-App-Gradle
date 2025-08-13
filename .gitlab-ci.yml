@@ -17,10 +17,17 @@ cache:
     - .gradle/
 
 
+stages:
+    - prepare next development cycle
+    - deploy
+    - release
+
+
 .gradle_template:
   image: gradle:8.4-jdk21-jammy
-  except:
-    - tags
+  rules:
+    # not in tags
+    -   if: $CI_COMMIT_TAG == null
   before_script:
     - export GRADLE_USER_HOME=`pwd`/.gradle
     - mkdir -p $GRADLE_USER_HOME || true
@@ -28,6 +35,7 @@ cache:
 
 
 deploy:artifactory:
+  stage: deploy
   extends: .gradle_template
   script:
     - ./gradlew publish
@@ -35,13 +43,13 @@ deploy:artifactory:
 
 git:release:
   extends: .gradle_template
-  only:
-    - main
+  stage: release
+  rules:
+    - when: manual
   script:
-    # Only perform the branching when this is SNAPSHOT version on the main branch.
-    - if [[ ! ($(./gradlew properties | grep version) =~ "SNAPSHOT") ]]; then exit 0; fi
     # Create a new commit on the main branch
     - ./gradlew configureReleaseBot
+      switchToMainAndCatchItUp
       removeSnapshotFromVersion
       updateVersionNumberInReadme
       gitCommitForRelease
@@ -51,8 +59,9 @@ git:release:
 
 git:preparesnapshot:
   extends: .gradle_template
-  only:
-    - main
+  stage: prepare next development cycle
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
     # Only perform the branching when this is not a SNAPSHOT version on the main branch.
     - if [[ ($(./gradlew properties | grep version) =~ "SNAPSHOT") ]]; then exit 0; fi
