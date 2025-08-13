@@ -5,7 +5,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath 'com.github.johnrengelman:shadow:8.1.1'
+        classpath 'com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9'
     }
 }
 
@@ -14,17 +14,22 @@ plugins {
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '1.2.1'
 
-    id 'de.paginagmbh.commons.gradle-release-tools' version '1.1.1-SNAPSHOT'
+    id 'de.paginagmbh.commons.gradle-release-tools' version '1.1.2'
 }
 
 dependencies {
-    runtimeOnly 'com.github.johnrengelman:shadow:8.1.1' // bundle all jars into one
+    implementation 'com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9' // bundle all jars into one
 }
 
 group = "de.paginagmbh.commons"
 version = "1.2.8-SNAPSHOT"
 
+javadoc {
+    options.encoding = 'UTF-8'
+}
+
 compileJava {
+    options.encoding = 'UTF-8'
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
 }

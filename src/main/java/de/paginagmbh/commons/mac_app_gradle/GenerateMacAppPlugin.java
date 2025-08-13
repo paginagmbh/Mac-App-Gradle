@@ -10,7 +10,7 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
   @Override
   public void apply(Project project) {
     // Needs to be built with shadowjar and application first to produce a single jar
-    project.getPlugins().apply("com.github.johnrengelman.shadow");
+    project.getPlugins().apply("com.gradleup.shadow");
     project.getPlugins().apply("application");
 
     // Activate ant integration in the FileUtils helper class
