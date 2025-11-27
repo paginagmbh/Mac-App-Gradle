@@ -204,7 +204,9 @@ public class AppBundler extends DefaultTask {
     String iconName = null;
     if (icon != null) {
       File iconFile = new File(icon);
-      iconName = iconFile.getName();
+      String fileName = iconFile.getName();
+      iconName =
+          fileName.endsWith(".icns") ? fileName.substring(0, fileName.length() - 5) : fileName;
       FileUtils.copyToDir(iconFile, resources);
     }
 
