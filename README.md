@@ -74,7 +74,7 @@ universalJavaApplicationStub {
 
     Wenn *compiled == true*, dann erwartet das Plugin einen zip-Download, den es entpackt, bei *false* einen direkten Download der ausführbaren Datei.
     Bei einem eigenen Downloadlink sollte diese Eigenschaft entsprechend gesetzt werden.
-    
+
 
 **downloadURL** (Optional, Default: siehe unten)
 :   Die URL, von der das Programm heruntergeladen wird.
@@ -113,7 +113,7 @@ Es wird dann einfach ausgeführt mit
 ./gradlew macApp
 ```
 
-Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie als einzelne Datei übertragen werden kann, aber Dateiberechtigungen intern beibehält. 
+Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie als einzelne Datei übertragen werden kann, aber Dateiberechtigungen intern beibehält.
 
 
 #### Argumente
@@ -152,6 +152,13 @@ Am Ende wird auch eine *.tar.gz*-Datei für die App bereitgestellt, sodass sie a
 :   Pfad zu einer *.icns*-Datei.
 
     **Beispiel:** `"${projectDir}/src/build/icon.icns"`
+
+**additionalResources** (Optional, Default: `[]`)
+:   Liste von zusätzlichen Dateien und Ordnern, die in das *Resources*-Verzeichnis der App kopiert werden sollen.
+    Dies ist nützlich, um zusätzliche Dateien wie Konfigurationsdateien, Bibliotheken oder andere Ressourcen bereitzustellen, die von der App benötigt werden.
+    Insbesondere betrifft das ab macOS 26 (Tahoe) Asset.car-Dateien für Icons und andere Ressourcen.
+
+    **Beispiel:** `["${projectDir}/src/build/Assets.car"]`
 
 **viewableDocumentTypes** (Optional, Default: `null`)
 :   UTIs verschiedener Dokumententypen, die in dieser app geöffnet werden können.

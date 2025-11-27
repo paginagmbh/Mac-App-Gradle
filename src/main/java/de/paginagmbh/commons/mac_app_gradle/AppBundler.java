@@ -81,6 +81,9 @@ public class AppBundler extends DefaultTask {
   /** The path to an icns file to use. */
   public String icon = null;
 
+  /** The path to additional resources to copy into the Resources folder. */
+  public String[] additionalResources = null;
+
   /** A list of document types that can be opened with this app as UTIs (customizable, optional). */
   public String[] viewableDocumentTypes = null;
 
@@ -203,6 +206,14 @@ public class AppBundler extends DefaultTask {
       File iconFile = new File(icon);
       iconName = iconFile.getName();
       FileUtils.copyToDir(iconFile, resources);
+    }
+
+    // Copy additional resources to the resources directory
+    if (additionalResources != null) {
+      for (String resourcePath : additionalResources) {
+        File resourceFile = new File(resourcePath);
+        FileUtils.copyToDir(resourceFile, resources);
+      }
     }
 
     // Copy the main jar and mark it as executable
