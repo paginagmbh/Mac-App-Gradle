@@ -3,6 +3,7 @@ package de.paginagmbh.commons.mac_app_gradle;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -409,10 +410,10 @@ public class SignAndNotarize extends DefaultTask {
     }
   }
 
-  /** Codesign the app. */
-  private void codesign() {
-    headline("Code-Signing App");
-    String appPath = getSignedAndNotarizedMacApp().getAbsolutePath();
+  /** Codesign a specific file. */
+  private void codesign(File file, boolean verify) {
+    String signPath = file.getAbsolutePath();
+    headline("Code-Signing " + outdir.toPath().relativize(file.toPath()));
     unlockKeychain();
     Shell.sh(
         "codesign",
@@ -424,11 +425,45 @@ public class SignAndNotarize extends DefaultTask {
         "runtime",
         "--sign",
         appleSignID,
-        appPath);
+        signPath);
 
     // Evaluate the result. These can throw errors if something went wrong – and abort the process.
-    Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", appPath);
-    Shell.sh("spctl", "-a", "-t", "exec", "-vv", appPath);
+    if (verify) {
+      Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", signPath);
+      Shell.sh("spctl", "-a", "-t", "exec", "-vv", signPath);
+    }
+  }
+
+  /** Codesign all relevant files inside the app bundle and the app bundle itself. */
+  private void codeSignAll() {
+    File appDir = getSignedAndNotarizedMacApp();
+    List<String> extensions =
+        Arrays.asList(
+            ".app",
+            ".dylib",
+            ".so",
+            ".framework",
+            ".node",
+            ".xpc",
+            ".bundle",
+            ".kext",
+            ".appex",
+            ".xcframework");
+    try {
+      Files.find(
+              appDir.toPath(),
+              16,
+              (path, attrs) ->
+                  extensions.stream().anyMatch(extension -> path.toString().endsWith(extension)))
+          .forEach(
+              p -> {
+                codesign(p.toFile(), false);
+              });
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    codesign(appDir, true);
   }
 
   /** Create a DiskImage that can be notarized. */
@@ -574,7 +609,7 @@ public class SignAndNotarize extends DefaultTask {
       importSigningCertificate();
       makeCertificateAvailable();
       copyAppOver();
-      codesign();
+      codeSignAll();
       createDmg();
       codesignDmg();
       notarizeDmg();

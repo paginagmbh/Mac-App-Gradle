@@ -4,9 +4,6 @@ buildscript {
         mavenCentral()
         gradlePluginPortal()
     }
-    dependencies {
-        classpath 'com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9'
-    }
 }
 
 plugins {
@@ -15,10 +12,6 @@ plugins {
     id 'com.gradle.plugin-publish' version '1.2.1'
 
     id 'de.paginagmbh.commons.gradle-release-tools' version '1.1.2'
-}
-
-dependencies {
-    implementation 'com.gradleup.shadow:com.gradleup.shadow.gradle.plugin:8.3.9' // bundle all jars into one
 }
 
 group = "de.paginagmbh.commons"

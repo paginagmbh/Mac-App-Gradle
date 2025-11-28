@@ -243,28 +243,6 @@ Die Output-Dateien wird durch die Task-Eigenschaften *signedAndNotarizedMacApp*,
 Dieser ist in der Regel *outdir/appName.app*, *outdir/appName.tar.gz* und *outdir/appName.dmg*.
 
 
-### shadowJar
-
-Bei [shadowJar](https://github.com/johnrengelman/shadow) handelt es sich um das einzige externe Plugin, das hier benötigt wird.
-Es vereint alle JARs in eine.
-Es muss nicht weiter konfiguriert werden, es empfiehlt sich aber im *build.gradle* mit
-
-```{code-block} groovy
-:caption: In build.gradle
-
-shadowJar {
-    minimize()
-}
-```
-
-Die Größe der Output-JAR zu (ca.) halbieren.
-
-:::{warning}
-Mit bestimmten Paketen kann es mit *minimize* zu Problemen kommen.
-Insbesondere eine Kombination aus launch4j und FlatLaf hat mit minimize zu einer kaputten Exe geführt, die aber ohne minimize funktionierte.
-:::
-
-
 ## errSecInternalComponent
 
 Dies ist ein Fehler, der manchmal auftritt.

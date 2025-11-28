@@ -2,6 +2,7 @@ package de.paginagmbh.commons.mac_app_gradle;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
@@ -10,12 +11,16 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ConfigurationContainer;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.plugins.JavaApplication;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.bundling.Jar;
 
 /** Create a mac app file structure. */
 public class AppBundler extends DefaultTask {
@@ -30,9 +35,6 @@ public class AppBundler extends DefaultTask {
 
   /** Get the {@link Project} in slightly less time, effort, and characters. */
   private Project project = getProject();
-
-  /** The task that bundles all files into one jar. */
-  private Task shadowJar = project.getTasks().findByPath("shadowJar");
 
   /** The application extension object to read data from later. */
   private JavaApplication javaApplication =
@@ -218,10 +220,18 @@ public class AppBundler extends DefaultTask {
       }
     }
 
+    // Get the jar task
+    Jar jarTask = (Jar) getProject().getTasks().getByName("jar");
+
+    // Get runtime classpath configuration
+    Configuration runtimeClasspath = getProject().getConfigurations().getByName("runtimeClasspath");
+
     // Copy the main jar and mark it as executable
     File mainJar = new File(javaDir, getProject().getName() + ".jar");
-    FileUtils.copyToFile(shadowJar.getOutputs().getFiles().getSingleFile(), mainJar);
+    FileUtils.copyToFile(jarTask.getOutputs().getFiles().getSingleFile(), mainJar);
     FileUtils.setExecutable(mainJar);
+
+    for (File file : runtimeClasspath.getFiles()) FileUtils.copyToDir(file, javaDir);
 
     // Setup the info.plist object with all the app metadata
     infoPlist.createEntry("CFBundleInfoDictionaryVersion", "6.0");

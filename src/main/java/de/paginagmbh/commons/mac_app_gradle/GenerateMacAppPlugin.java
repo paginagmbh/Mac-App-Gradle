@@ -3,14 +3,14 @@ package de.paginagmbh.commons.mac_app_gradle;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.artifacts.ConfigurationContainer;
 
 /** The plugin for generating and signing a mac app. */
 public class GenerateMacAppPlugin implements Plugin<Project> {
 
   @Override
   public void apply(Project project) {
-    // Needs to be built with shadowjar and application first to produce a single jar
-    project.getPlugins().apply("com.gradleup.shadow");
     project.getPlugins().apply("application");
 
     // Activate ant integration in the FileUtils helper class
@@ -24,9 +24,9 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
     Task signAndNotarizeMacApp =
         project.getTasks().create("signedAndNotarizedMacApp", SignAndNotarize.class);
 
-    // Download the UniversalJavaApplicationStub and make a single jar before creating the mac app.
+    // Download the UniversalJavaApplicationStub and make jars before creating the mac app.
     appBundler.dependsOn(ujas);
-    appBundler.dependsOn("shadowJar");
+    appBundler.dependsOn("jar");
 
     // Only sign the mac app after it exists.
     signAndNotarizeMacApp.dependsOn(appBundler);

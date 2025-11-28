@@ -134,7 +134,7 @@ public class Plist {
     // Add the elements from the classpath to an array. Assume the live in the java root directory.
     javaX.appendChild(textNode("key", "ClassPath"));
     Element classPath = doc.createElement("array");
-    addString(classPath, "$JAVAROOT/" + jarName);
+    addString(classPath, "$JAVAROOT/*");
     javaX.appendChild(classPath);
 
     // Add VM options to use UTF 8
