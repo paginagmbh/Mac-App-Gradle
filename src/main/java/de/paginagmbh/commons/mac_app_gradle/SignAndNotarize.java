@@ -454,7 +454,8 @@ public class SignAndNotarize extends DefaultTask {
               appDir.toPath(),
               16,
               (path, attrs) ->
-                  extensions.stream().anyMatch(extension -> path.toString().endsWith(extension)))
+                  extensions.stream().anyMatch(extension -> path.toString().endsWith(extension))
+                      && path != appDir.toPath())
           .forEach(
               p -> {
                 codesign(p.toFile(), false);
