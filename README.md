@@ -26,7 +26,7 @@ plugins {
     id 'java'
     id 'application'
 
-    id 'gmbh.pagina.tools.gradle.mac_app' version '1.3.0'
+    id 'gmbh.pagina.tools.gradle.mac_app' version '1.3.1-SNAPSHOT'
 }
 
 version = "1.0.0"
