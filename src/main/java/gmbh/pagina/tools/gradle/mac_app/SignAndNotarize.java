@@ -1,4 +1,4 @@
-package de.paginagmbh.commons.mac_app_gradle;
+package gmbh.pagina.tools.gradle.mac_app;
 
 import java.io.File;
 import java.io.FileOutputStream;
