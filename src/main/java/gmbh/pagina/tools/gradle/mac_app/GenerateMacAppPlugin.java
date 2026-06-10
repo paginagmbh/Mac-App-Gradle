@@ -14,8 +14,9 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
     // Activate ant integration in the FileUtils helper class
     FileUtils.setProject(project);
 
-    // Task to download the UniversalJavaApplicationStub.
-    Task ujas = project.getTasks().create("universalJavaApplicationStub", UJASDownloader.class);
+    // Task to download the JavaApplicationStub.
+    JASDownloader jas = project.getTasks().create("javaApplicationStub", JASDownloader.class);
+
     // Task to create an unsigned mac app
     Task appBundler = project.getTasks().create("macApp", AppBundler.class);
     // Task to sign the unsigned mac app
@@ -23,7 +24,7 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
         project.getTasks().create("signedAndNotarizedMacApp", SignAndNotarize.class);
 
     // Download the UniversalJavaApplicationStub and make jars before creating the mac app.
-    appBundler.dependsOn(ujas);
+    appBundler.dependsOn(jas);
     appBundler.dependsOn("jar");
 
     // Only sign the mac app after it exists.

@@ -112,7 +112,7 @@ public class Plist {
 
   /** Create a boolean node (true or false) and return it. */
   private Node booleanNode(boolean value) {
-    return doc.createElement(value ? "true" : "false");
+    return doc.createElement(Boolean.toString(value));
   }
 
   /**
@@ -128,8 +128,7 @@ public class Plist {
     Element javaX = doc.createElement("dict");
 
     createEntry(javaX, "MainClass", mainClass);
-    // Adjust the version to the format required by UJAS: 11 → 11.0+
-    createEntry(javaX, "JVMVersion", String.valueOf(minimumVersion) + ".0+");
+    createEntry(javaX, "JVMVersion", String.valueOf(minimumVersion) + "+");
 
     // Add the elements from the classpath to an array. Assume the live in the java root directory.
     javaX.appendChild(textNode("key", "ClassPath"));

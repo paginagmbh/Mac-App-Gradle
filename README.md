@@ -11,8 +11,8 @@ For this it will install some requirements as follows:
 * If it does not exist it will install it using npm.
 * If npm is not installed, it will install it using brew.
 * If brew is not installed, an error will be thrown.
-* It downloads the *universalJavaApplicationStub* from GitHub using curl.
-    If curl is not available, an error is thrown.
+* It downloads the configured *javaApplicationStub* from GitHub using curl.
+  If curl is not available, an error is thrown.
 
 
 ## Usage
@@ -26,7 +26,7 @@ plugins {
     id 'java'
     id 'application'
 
-    id 'gmbh.pagina.tools.gradle.mac_app' version '1.3.2-SNAPSHOT'
+    id 'gmbh.pagina.tools.gradle.mac_app' version '2.0.0-SNAPSHOT'
 }
 
 version = "1.0.0"
@@ -55,50 +55,71 @@ macApp {
 This plugin consists of three sub-tasks that are executed in order.
 
 
-### universalJavaApplicationStub
+### javaApplicationStub
 
 ```groovy
-universalJavaApplicationStub {
+javaApplicationStub {
     // No manual settings required. These are the defaults:
-    compiled = false
-    downloadURL = "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"
-    outdir = "${buildDir}/universalJavaApplicationStub"
+    source = nativeJavaApplicationStubv0_9
+    // equivalent explicit values:
+    // url = "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v0.9/NativeJavaApplicationStub"
+    // unzip = false
+    // executableName = "NativeJavaApplicationStub"
+    // outdir = "${buildDir}/javaApplicationStub"
 }
 ```
 
 
 #### Arguments
 
-**compiled** (Optional, default: `false`)
+**source** (Optional, default: `nativeJavaApplicationStubv0_9`)
 
-If *compiled == true*, the version of `universalJavaApplicationStub` compiled with *csh* is downloaded.
-Otherwise, the plain shell version is used.
-The compiled version is built with the Intel toolchain and therefore only runs on Intel Macs and Apple Silicon Macs with
-Rosetta.
-This is inconvenient for end users, so the shell version is more flexible.
+Built-in source presets:
 
-If *compiled == true*, the plugin expects a zip download that it then extracts; if *false*, it expects a direct download of the executable file.
-If you use a custom download link, this property should be set accordingly.
+* `universalJavaApplicationStubShell`
+* `universalJavaApplicationStubProcompiled`
+* `nativeJavaApplicationStubv0_9`
 
+Repositories:
 
-**downloadURL** (Optional, default: see below)
+* Universal Java Application Stub: <https://github.com/tofi86/universalJavaApplicationStub>
+* Native Java Application Stub: <https://github.com/paginagmbh/NativeJavaApplicationStub>
+
+You can assign them either in `macApp` or in `javaApplicationStub`.
+
+```groovy
+macApp {
+    javaApplicationStub = universalJavaApplicationStubShell
+}
+
+// or
+javaApplicationStub {
+    source = universalJavaApplicationStubProcompiled
+}
+```
+
+**url** (Optional, default: resolved from `source`)
 
 The URL from which the program is downloaded.
 
-Default for *compiled == true*: "https://raw.githubusercontent.com/tofi86/universalJavaApplicationStub/master/src/universalJavaApplicationStub"`
+**unzip** (Optional, default: resolved from `source`)
 
-Default for *compiled == false*: `"https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip"`
+If `true`, the plugin expects an archive download and extracts it.
+If `false`, the plugin expects a direct executable download.
 
+**executableName** (Optional, default: resolved from `source`)
 
-**outdir** (Optional, default: `"${buildDir}/universalJavaApplicationStub"`)
+The file name expected after download/unpack and copied into the app bundle.
+
+**outdir** (Optional, default: `"${buildDir}/javaApplicationStub"`)
 
 
 #### API
 
 The output file is described by the task property *targetFile*.
-This is usually either *outdir/universalJavaApplicationStub* or
-*outdir/universalJavaApplicationStub/universalJavaApplicationStub*.
-Here, the first is the *targetFile* for the shell script, and the second is the *targetFile* for the compiled download.
+This is usually either *outdir/<executableName>* or
+*outdir/<downloadFileNameWithoutExtension>/<executableName>*.
+The first is used for direct downloads, the second for zipped sources.
 
 
 ### macApp
@@ -113,7 +134,7 @@ macApp {
 ```
 
 Creates an executable but unsigned macOS app.
-It uses the *universalJavaApplicationStub* task.
+It uses the *javaApplicationStub* task.
 None of the settings is required, but it is recommended to at least use the values from the code example above.
 You can then simply run
 

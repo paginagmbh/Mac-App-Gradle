@@ -18,6 +18,7 @@ import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.Task;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
@@ -26,11 +27,13 @@ import org.gradle.api.tasks.TaskAction;
 public class SignAndNotarize extends DefaultTask {
 
   /** The description of this gradle task. */
+  @Internal
   public String getDescription() {
     return "Sign and notarize the mac .app bundle.";
   }
 
   /** The Gradle task group description this task belongs to. */
+  @Internal
   public String getGroup() {
     return "Make Mac App";
   }

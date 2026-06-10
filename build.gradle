@@ -7,15 +7,19 @@ buildscript {
 }
 
 plugins {
-    id 'eclipse'
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '1.2.1'
 
     id 'gmbh.pagina.tools.gradle.release' version '1.2.0'
 }
 
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+}
+
 group = "gmbh.pagina.tools.gradle"
-version = "1.3.2-SNAPSHOT"
+version = "2.0.0-SNAPSHOT"
 
 javadoc {
     options.encoding = 'UTF-8'
@@ -33,8 +37,8 @@ gradlePlugin {
 
     plugins {
         myPlugins {
-            id = 'gmbh.pagina.tools.gradle.mac_app'
-            implementationClass = 'gmbh.pagina.tools.gradle.mac_app.GenerateMacAppPlugin'
+            id = "${project.group}.mac_app"
+            implementationClass = "${project.group}.mac_app.GenerateMacAppPlugin"
             displayName = 'Mac App Bundler and Signer'
             description = 'Create a Mac App for java source, sign and notarize it.'
             tags.set(['macOS', 'mac', 'codesign', 'sign', 'notarize', 'bundle'])
@@ -58,5 +62,5 @@ publishing {
 
 
 updateVersionNumberInReadme {
-    pluginId = "gmbh.pagina.tools.gradle.mac_app"
+    pluginId = "${project.group}.mac_app"
 }

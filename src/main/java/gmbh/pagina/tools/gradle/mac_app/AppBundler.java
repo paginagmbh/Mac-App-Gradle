@@ -3,6 +3,8 @@ package gmbh.pagina.tools.gradle.mac_app;
 import java.io.File;
 import java.io.IOException;
 
+import groovy.lang.Closure;
+
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
@@ -14,6 +16,7 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.plugins.JavaApplication;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
@@ -22,10 +25,12 @@ import org.gradle.api.tasks.bundling.Jar;
 /** Create a mac app file structure. */
 public class AppBundler extends DefaultTask {
 
+  @Internal
   public String getDescription() {
     return "Create an unsigned mac .app bundle.";
   }
 
+  @Internal
   public String getGroup() {
     return "Make Mac App";
   }
@@ -89,6 +94,34 @@ public class AppBundler extends DefaultTask {
   /** The logger to use for file logging */
   @SuppressWarnings("unused")
   private final Logger logger = Logging.getLogger(getClass());
+
+  /** Configure the javaApplicationStub task from the macApp task. */
+  public void setJavaApplicationStub(JavaApplicationStubSource source) {
+    ((JASDownloader) project.getTasks().getByName("javaApplicationStub")).setSource(source);
+  }
+
+  /** Configure the javaApplicationStub task from the macApp task. */
+  public void javaApplicationStub(Closure<?> closure) {
+    JASDownloader jas = (JASDownloader) project.getTasks().getByName("javaApplicationStub");
+    closure.setDelegate(jas);
+    closure.setResolveStrategy(Closure.DELEGATE_FIRST);
+    closure.call();
+  }
+
+  @Internal
+  public JavaApplicationStubSource getUniversalJavaApplicationStubShell() {
+    return JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_SHELL;
+  }
+
+  @Internal
+  public JavaApplicationStubSource getUniversalJavaApplicationStubProcompiled() {
+    return JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PROCOMPILED;
+  }
+
+  @Internal
+  public JavaApplicationStubSource getNativeJavaApplicationStubv0_9() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9;
+  }
 
   /** The app bundle that is generated. */
   @OutputDirectory
@@ -187,11 +220,11 @@ public class AppBundler extends DefaultTask {
     File macOS = new File(contents, "MacOS");
     macOS.mkdirs();
 
-    // Copy the universal java application stub and mark it as executable.
-    Task ujasTask = project.getTasks().findByPath("universalJavaApplicationStub");
-    File universalJavaApplicationStub = ujasTask.getOutputs().getFiles().getSingleFile();
-    FileUtils.copyToDir(universalJavaApplicationStub, macOS);
-    FileUtils.setExecutable(new File(macOS, universalJavaApplicationStub.getName()));
+    // Copy the Java application stub and mark it as executable.
+    Task jasTask = project.getTasks().findByPath("javaApplicationStub");
+    File javaApplicationStub = jasTask.getOutputs().getFiles().getSingleFile();
+    FileUtils.copyToDir(javaApplicationStub, macOS);
+    FileUtils.setExecutable(new File(macOS, javaApplicationStub.getName()));
 
     File resources = new File(contents, "Resources");
     resources.mkdirs();
@@ -237,7 +270,7 @@ public class AppBundler extends DefaultTask {
     infoPlist.createEntry("CFBundlePackageType", "APPL");
     infoPlist.createEntry("CFBundleName", appName);
     infoPlist.createEntry("CFBundleIdentifier", bundleIdentifier);
-    infoPlist.createEntry("CFBundleExecutable", universalJavaApplicationStub.getName());
+    infoPlist.createEntry("CFBundleExecutable", javaApplicationStub.getName());
     infoPlist.createEntry("CFBundleVersion", (String) project.getVersion());
     infoPlist.createEntry("CFBundleShortVersionString", (String) project.getVersion());
     infoPlist.createEntry("CFBundleDevelopmentRegion", developmentRegion);
