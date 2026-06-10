@@ -10,14 +10,15 @@ import java.nio.file.StandardCopyOption;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.logging.Logging;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
 
 /** Download the configured Java application stub. */
+@CacheableTask
 public class JASDownloader extends DefaultTask {
 
   private final Property<String> sourceUrl = getProject().getObjects().property(String.class);
@@ -192,15 +193,10 @@ public class JASDownloader extends DefaultTask {
       throw new IllegalStateException(
           "Could not create output directory: " + outDir.getAbsolutePath());
     }
-    if (getTargetFile().exists()) {
-      // If the file has already been downloaded, don’t download it again. Assume that it's fine.
-      Logging.getLogger(getClass()).info("Target file already exists; skipping.");
-    } else {
-      // Download the file. Duh.
-      download();
-      // Unzip it, if an archive is configured. Non-zipped sources are downloaded directly.
-      if (isUnzip()) unzip();
-    }
+    // Download the file. Gradle's up-to-date checks and build cache avoid redundant downloads.
+    download();
+    // Unzip it, if an archive is configured. Non-zipped sources are downloaded directly.
+    if (isUnzip()) unzip();
   }
 }
 
