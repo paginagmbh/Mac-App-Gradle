@@ -52,7 +52,7 @@ macApp {
 
 ## Task Documentation
 
-This plugin consists of three sub-tasks that are executed in order.
+This plugin consists of task steps that are executed in order.
 
 
 ### javaApplicationStub
@@ -142,8 +142,8 @@ You can then simply run
 ./gradlew macApp
 ```
 
-At the end, a *.tar.gz* file for the app is also provided so it can be transferred as a single file while preserving
-internal file permissions.
+Creates the unsigned *.app* bundle.
+The archive is produced by the separate `macAppArchive` task, which `macApp` finalizes automatically.
 
 
 #### Arguments
@@ -215,8 +215,21 @@ Example: `["public.plain-text", "public.log"]`
 
 #### API
 
-The output files are described by the task properties *macApp* and *macAppTarGz*.
-These are *outdir/appName.app* and *outdir/appName.tar.gz*.
+The app bundle is described by the task property *macApp* and lives at *outdir/appName.app*.
+For compatibility, the task still exposes *macAppTarGz* as the conventional archive path
+*outdir/appName.tar.gz*, but archive generation is handled by `macAppArchive`.
+
+
+### macAppArchive
+
+```bash
+./gradlew macAppArchive
+```
+
+Creates a *.tar.gz* archive from the unsigned *.app* bundle so it can be transferred as a single file while preserving
+internal file permissions.
+
+This task depends on `macApp`, so running it directly will first generate the app bundle if needed.
 
 
 ### signedAndNotarizedMacApp
@@ -227,6 +240,8 @@ These are *outdir/appName.app* and *outdir/appName.tar.gz*.
 
 Signs and notarizes the macOS app.
 Builds on top of the *macApp* task.
+The archive is produced by the separate `signedAndNotarizedMacAppArchive` task,
+which `signedAndNotarizedMacApp` finalizes automatically.
 All required arguments can also be set via environment variables to make CI integration easier.
 
 
@@ -305,9 +320,20 @@ Icon used for the *.dmg* file.
 
 #### API
 
-The output files are described by the task properties *signedAndNotarizedMacApp*, *signedAndNotarizedMacAppTarGz*, and
-*notarizedDMG*.
-This is usually *outdir/appName.app*, *outdir/appName.tar.gz*, and *outdir/appName.dmg*.
+The signed app and dmg are described by the task properties *signedAndNotarizedMacApp* and *notarizedDMG*.
+These are usually *outdir/appName.app* and *outdir/appName.dmg*.
+For compatibility, the task still exposes *signedAndNotarizedMacAppTarGz* as the conventional archive path
+*outdir/appName.tar.gz*, but archive generation is handled by `signedAndNotarizedMacAppArchive`.
+
+
+### signedAndNotarizedMacAppArchive
+
+```bash
+./gradlew signedAndNotarizedMacAppArchive
+```
+
+Creates a *.tar.gz* archive from the signed and notarized *.app* bundle.
+This task depends on `signedAndNotarizedMacApp`, so running it directly will perform signing/notarization first.
 
 
 ## errSecInternalComponent
@@ -393,7 +419,7 @@ public static final String name = meta.getString("name");
 
 A merge into *main* automatically publishes the next version to Artifactory.
 A push to *development* instead publishes a *-SNAPSHOT* version.
-For this the pagian artifactory access needs to be setup locally.
+For this the pagina artifactory access needs to be setup locally.
 This repository contains a git submodule to configure this.
 It is not needed when not deploying snapshots.
 You can also publish to Artifactory locally:

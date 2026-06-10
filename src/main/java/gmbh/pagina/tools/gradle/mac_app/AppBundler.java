@@ -17,17 +17,21 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
-import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.bundling.Jar;
 
 /** Create a mac app file structure. */
+@CacheableTask
 public class AppBundler extends DefaultTask {
 
   public AppBundler() {
@@ -143,8 +147,7 @@ public class AppBundler extends DefaultTask {
     this.copyright.set(copyright);
   }
 
-  @Input
-  @Optional
+  @Internal
   public String getIcon() {
     return icon.getOrNull();
   }
@@ -153,8 +156,7 @@ public class AppBundler extends DefaultTask {
     this.icon.set(icon);
   }
 
-  @Input
-  @Optional
+  @Internal
   public java.util.List<String> getAdditionalResources() {
     return additionalResources.getOrNull();
   }
@@ -218,11 +220,13 @@ public class AppBundler extends DefaultTask {
   }
 
   @InputFiles
+  @PathSensitive(PathSensitivity.NAME_ONLY)
   public ConfigurableFileCollection getJavaApplicationStubFiles() {
     return javaApplicationStubFiles;
   }
 
   @InputFiles
+  @PathSensitive(PathSensitivity.NAME_ONLY)
   public ConfigurableFileCollection getMainJarFiles() {
     return mainJarFiles;
   }
@@ -267,6 +271,23 @@ public class AppBundler extends DefaultTask {
     return targetJavaVersion;
   }
 
+  @Optional
+  @InputFile
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public File getIconFile() {
+    String iconPath = getIcon();
+    return iconPath == null ? null : new File(iconPath);
+  }
+
+  @Optional
+  @InputFiles
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public ConfigurableFileCollection getAdditionalResourceFiles() {
+    java.util.List<String> resources = getAdditionalResources();
+    if (resources == null) return getProject().files();
+    return getProject().files((Object[]) resources.toArray(new String[0]));
+  }
+
   /** The logger to use for file logging */
   @SuppressWarnings("unused")
   private final Logger logger = Logging.getLogger(getClass());
@@ -275,6 +296,7 @@ public class AppBundler extends DefaultTask {
     appName.convention(getProject().getName());
     outdir.convention(getProject().getLayout().getBuildDirectory().dir("unsignedMacApp"));
     pkgInfoSignature.convention(appName.map(this::computePkgInfoSignature));
+    bundleIdentifier.convention(mainClassName.map(this::computeBundleIdentifier));
   }
 
   /** Configure the javaApplicationStub task from the macApp task. */
@@ -311,8 +333,8 @@ public class AppBundler extends DefaultTask {
     return new File(getOutdir(), getAppName() + ".app");
   }
 
-  /** The app bundle that is generated. */
-  @OutputFile
+  /** The archive path traditionally generated alongside the app bundle. */
+  @Internal
   public File getMacAppTarGz() {
     return new File(getOutdir(), getAppName() + ".tgz");
   }
@@ -360,12 +382,12 @@ public class AppBundler extends DefaultTask {
   }
 
   /** Compute a bundle identifier from the main class’s parent package. */
-  private String computeBundleIdentifier() {
+  private String computeBundleIdentifier(String mainClassName) {
     String bundleIdentifier = "";
     StringBuilder nextWord = new StringBuilder();
 
     // Keep adding words except the last one.
-    for (char c : getMainClassName().toCharArray()) {
+    for (char c : mainClassName.toCharArray()) {
       if (c == '.') {
         bundleIdentifier =
             (bundleIdentifier.isEmpty() ? "" : bundleIdentifier + ".") + nextWord.toString();
@@ -381,9 +403,6 @@ public class AppBundler extends DefaultTask {
   @TaskAction
   public void taskAction() throws IOException {
     Plist infoPlist = new Plist();
-
-    // Fill in the bundle identifier now from the current main class.
-    if (getBundleIdentifier() == null) setBundleIdentifier(computeBundleIdentifier());
 
     // Generate the app directory
     File app = getMacApp();
@@ -482,8 +501,5 @@ public class AppBundler extends DefaultTask {
     } catch (ParserConfigurationException | TransformerException e) {
       throw new IllegalStateException("Could not write Info.plist", e);
     }
-
-    // Create a zip file for distribution
-    FileUtils.tarGz(app, getMacAppTarGz());
   }
 }

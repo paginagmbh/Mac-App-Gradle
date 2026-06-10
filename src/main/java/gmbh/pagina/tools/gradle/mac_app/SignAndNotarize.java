@@ -259,6 +259,11 @@ public class SignAndNotarize extends DefaultTask {
     return projectVersion;
   }
 
+  @Internal
+  public DirectoryProperty getOutdirProperty() {
+    return outdir;
+  }
+
   /** The signed mac app bundle. */
   @OutputDirectory
   public File getSignedAndNotarizedMacApp() {
@@ -272,7 +277,7 @@ public class SignAndNotarize extends DefaultTask {
   }
 
   /** A tar.gz file containing the signed app. */
-  @OutputFile
+  @Internal
   public File getSignedAndNotarizedMacAppTarGz() {
     return new File(getOutdir(), getAppName() + ".tgz");
   }
@@ -704,11 +709,6 @@ public class SignAndNotarize extends DefaultTask {
     Shell.sh("xcrun", "stapler", "validate", appPath);
   }
 
-  /** Archive the mac app. */
-  private void archive() {
-    FileUtils.tarGz(getSignedAndNotarizedMacApp(), getSignedAndNotarizedMacAppTarGz());
-  }
-
   /**
    * Cleanup: Delete the certificate and the keychain to not leave any sensitive data accessible. In
    * case of a crash during the process, the cleanup should still be performed.
@@ -771,7 +771,6 @@ public class SignAndNotarize extends DefaultTask {
       codesignDmg();
       notarizeDmg();
       staple();
-      archive();
     } finally {
       // Perform cleanup at the end, even in case of an error.
       cleanup();

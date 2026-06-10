@@ -27,9 +27,15 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
 
     // Task to create an unsigned mac app
     TaskProvider<AppBundler> appBundler = project.getTasks().register("macApp", AppBundler.class);
+    TaskProvider<MacAppArchive> macAppArchive =
+        project.getTasks().register("macAppArchive", MacAppArchive.class);
     // Task to sign the unsigned mac app
     TaskProvider<SignAndNotarize> signAndNotarizeMacApp =
         project.getTasks().register("signedAndNotarizedMacApp", SignAndNotarize.class);
+    TaskProvider<SignedAndNotarizedMacAppArchive> signedAndNotarizedMacAppArchive =
+        project
+            .getTasks()
+            .register("signedAndNotarizedMacAppArchive", SignedAndNotarizedMacAppArchive.class);
 
     // Download the JavaApplicationStub and make jars before creating the mac app.
     appBundler.configure(
@@ -50,6 +56,17 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
           task.dependsOn(jar);
         });
 
+    macAppArchive.configure(
+        task -> {
+          task.getAppNameProperty().convention(appBundler.flatMap(AppBundler::getAppNameProperty));
+          task.getOutdirProperty().convention(appBundler.flatMap(AppBundler::getOutdirProperty));
+          task.getSourceDirectoryProperty()
+              .convention(appBundler.flatMap(AppBundler::getOutdirProperty));
+          task.dependsOn(appBundler);
+        });
+
+    appBundler.configure(task -> task.finalizedBy(macAppArchive));
+
     // Only sign the mac app after it exists.
     signAndNotarizeMacApp.configure(
         task -> {
@@ -61,5 +78,18 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
               .convention(project.provider(() -> String.valueOf(project.getVersion())));
           task.dependsOn(appBundler);
         });
+
+    signedAndNotarizedMacAppArchive.configure(
+        task -> {
+          task.getAppNameProperty()
+              .convention(signAndNotarizeMacApp.flatMap(SignAndNotarize::getAppNameProperty));
+          task.getOutdirProperty()
+              .convention(signAndNotarizeMacApp.flatMap(SignAndNotarize::getOutdirProperty));
+          task.getSourceDirectoryProperty()
+              .convention(signAndNotarizeMacApp.flatMap(SignAndNotarize::getOutdirProperty));
+          task.dependsOn(signAndNotarizeMacApp);
+        });
+
+    signAndNotarizeMacApp.configure(task -> task.finalizedBy(signedAndNotarizedMacAppArchive));
   }
 }
