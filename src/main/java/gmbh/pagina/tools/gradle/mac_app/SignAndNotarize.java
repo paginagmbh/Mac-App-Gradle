@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -15,10 +16,13 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.GradleScriptException;
 import org.gradle.api.InvalidUserDataException;
-import org.gradle.api.Task;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
@@ -26,16 +30,9 @@ import org.gradle.api.tasks.TaskAction;
 /** The task that signs and notarizes the mac app. Only works on macOS. */
 public class SignAndNotarize extends DefaultTask {
 
-  /** The description of this gradle task. */
-  @Internal
-  public String getDescription() {
-    return "Sign and notarize the mac .app bundle.";
-  }
-
-  /** The Gradle task group description this task belongs to. */
-  @Internal
-  public String getGroup() {
-    return "Make Mac App";
+  public SignAndNotarize() {
+    setDescription("Sign and notarize the mac .app bundle.");
+    setGroup("Make Mac App");
   }
 
   /**
@@ -43,10 +40,10 @@ public class SignAndNotarize extends DefaultTask {
    * generates a default one with a unique name that is deleted after use. However, one can also set
    * it to login.keychain – which will not be deleted after use.
    */
-  public String keychainName = "TemporaryPaginaSigningKeychain.keychain";
+  private final Property<String> keychainName = getProject().getObjects().property(String.class);
 
   /** The password for the keychain. Has to be the user password if the login keychain is used. */
-  public String keychainPassword = "TotallySecretPassword";
+  private final Property<String> keychainPassword = getProject().getObjects().property(String.class);
 
   /**
    * The path to the signing certificate (customizable, auto). Defaults to one read from environment
@@ -57,64 +54,227 @@ public class SignAndNotarize extends DefaultTask {
    * <p>If the variable is null, it will be assigned at task-runtime since the outdir can be changed
    * by the user before then..
    */
-  public String certificate = null;
+  private final Property<String> certificate = getProject().getObjects().property(String.class);
 
   /**
    * The password to the certificate (customizable, auto). Defaults to one read from the environment
    * variables. Either directly from <em>$APPLE_SIGNING_PASSWORD</em> or using a (not) “secure” base
    * 64 encoded variable <em>$APPLE_SIGNING_PASSWORD_BASE64</em>.
    */
-  public String certificatePassword = getCertificatePassword();
+  private final Property<String> certificatePassword = getProject().getObjects().property(String.class);
 
   /**
    * The AppleID used for code signing (customizable, auto). Defaults to one found in an environment
    * variable named <em>$APPLE_SIGN_ID</em>. This has a format lie <em>Developer ID Application: The
    * Company (ASDF213FDSA)</em>.
    */
-  public String appleSignID = System.getenv("APPLE_SIGN_ID");
+  private final Property<String> appleSignID = getProject().getObjects().property(String.class);
 
   /**
    * The AppleID used for code signing (customizable, auto). Defaults to one found in an environment
    * variable named <em>$APPLE_SIGN_ID</em>. This is usually an e-mail address.
    */
-  public String appleIDUser = System.getenv("APPLE_ID_USER");
+  private final Property<String> appleIDUser = getProject().getObjects().property(String.class);
 
   /**
    * The password to the AppleID used for code signing (customizable, auto). By default it is pulled
    * from the environment variable named <em>$APPLE_ID_PASSWORD</em>.
    */
-  public String appleIDPassword = System.getenv("APPLE_ID_PASSWORD");
+  private final Property<String> appleIDPassword = getProject().getObjects().property(String.class);
 
   /**
    * The TeamID of the AppleID used for signing and notarizing the app (customizable, auto). Default
    * is read from the environment variable <em>$APPLE_ID_TEAM_ID</em>. The parenthesized part of the
-   * {@link appleSignID} should be the same.
+   * {@link #appleSignID} should be the same.
    */
-  public String appleIDTeamID = System.getenv("APPLE_ID_TEAM_ID");
+  private final Property<String> appleIDTeamID = getProject().getObjects().property(String.class);
 
   /** The icon used for the disk image (customizable, auto). Defaults to the app icon. */
-  public String dmgIcon = null;
+  private final Property<String> dmgIcon = getProject().getObjects().property(String.class);
 
   /** The directory that is used for outputting the file (customizable, auto). */
-  public File outdir =
-      getProject().getLayout().getBuildDirectory().file("signedMacApp").get().getAsFile();
+  private final DirectoryProperty outdir = getProject().getObjects().directoryProperty();
+  private final Property<String> appName = getProject().getObjects().property(String.class);
+  private final DirectoryProperty unsignedMacAppDirectory = getProject().getObjects().directoryProperty();
+  private final Property<String> macAppIcon = getProject().getObjects().property(String.class);
+  private final Property<String> projectVersion = getProject().getObjects().property(String.class);
+
+  {
+    keychainName.convention("TemporaryPaginaSigningKeychain.keychain");
+    keychainPassword.convention("TotallySecretPassword");
+    certificatePassword.convention(loadCertificatePasswordFromEnv());
+    appleSignID.convention(System.getenv("APPLE_SIGN_ID"));
+    appleIDUser.convention(System.getenv("APPLE_ID_USER"));
+    appleIDPassword.convention(System.getenv("APPLE_ID_PASSWORD"));
+    appleIDTeamID.convention(System.getenv("APPLE_ID_TEAM_ID"));
+    outdir.convention(getProject().getLayout().getBuildDirectory().dir("signedMacApp"));
+  }
+
+  @Input
+  public String getKeychainName() {
+    return keychainName.get();
+  }
+
+  public void setKeychainName(String keychainName) {
+    this.keychainName.set(keychainName);
+  }
+
+  @Input
+  public String getKeychainPassword() {
+    return keychainPassword.get();
+  }
+
+  public void setKeychainPassword(String keychainPassword) {
+    this.keychainPassword.set(keychainPassword);
+  }
+
+  @Input
+  @Optional
+  public String getCertificate() {
+    return certificate.getOrNull();
+  }
+
+  public void setCertificate(String certificate) {
+    this.certificate.set(certificate);
+  }
+
+  @Input
+  @Optional
+  public String getCertificatePassword() {
+    return certificatePassword.getOrNull();
+  }
+
+  public void setCertificatePassword(String certificatePassword) {
+    this.certificatePassword.set(certificatePassword);
+  }
+
+  @Input
+  @Optional
+  public String getAppleSignID() {
+    return appleSignID.getOrNull();
+  }
+
+  public void setAppleSignID(String appleSignID) {
+    this.appleSignID.set(appleSignID);
+  }
+
+  @Input
+  @Optional
+  public String getAppleIDUser() {
+    return appleIDUser.getOrNull();
+  }
+
+  public void setAppleIDUser(String appleIDUser) {
+    this.appleIDUser.set(appleIDUser);
+  }
+
+  @Input
+  @Optional
+  public String getAppleIDPassword() {
+    return appleIDPassword.getOrNull();
+  }
+
+  public void setAppleIDPassword(String appleIDPassword) {
+    this.appleIDPassword.set(appleIDPassword);
+  }
+
+  @Input
+  @Optional
+  public String getAppleIDTeamID() {
+    return appleIDTeamID.getOrNull();
+  }
+
+  public void setAppleIDTeamID(String appleIDTeamID) {
+    this.appleIDTeamID.set(appleIDTeamID);
+  }
+
+  @Input
+  @Optional
+  public String getDmgIcon() {
+    return dmgIcon.getOrNull();
+  }
+
+  public void setDmgIcon(String dmgIcon) {
+    this.dmgIcon.set(dmgIcon);
+  }
+
+  @Internal
+  public File getOutdir() {
+    return outdir.get().getAsFile();
+  }
+
+  public void setOutdir(String outdir) {
+    this.outdir.fileValue(new File(outdir));
+  }
+
+  public void setOutdir(File outdir) {
+    this.outdir.fileValue(outdir);
+  }
+
+  @Input
+  public String getAppName() {
+    return appName.get();
+  }
+
+  public void setAppName(String appName) {
+    this.appName.set(appName);
+  }
+
+  @Internal
+  public DirectoryProperty getUnsignedMacAppDirectoryProperty() {
+    return unsignedMacAppDirectory;
+  }
+
+  @Input
+  @Optional
+  public String getMacAppIcon() {
+    return macAppIcon.getOrNull();
+  }
+
+  public void setMacAppIcon(String macAppIcon) {
+    this.macAppIcon.set(macAppIcon);
+  }
+
+  @Input
+  public String getProjectVersion() {
+    return projectVersion.get();
+  }
+
+  public void setProjectVersion(String projectVersion) {
+    this.projectVersion.set(projectVersion);
+  }
+
+  @Internal
+  public Property<String> getAppNameProperty() {
+    return appName;
+  }
+
+  @Internal
+  public Property<String> getMacAppIconProperty() {
+    return macAppIcon;
+  }
+
+  @Internal
+  public Property<String> getProjectVersionProperty() {
+    return projectVersion;
+  }
 
   /** The signed mac app bundle. */
   @OutputDirectory
   public File getSignedAndNotarizedMacApp() {
-    return new File(outdir, getAppName() + ".app");
+    return new File(getOutdir(), getAppName() + ".app");
   }
 
   /** The notarized installation disk image. */
   @OutputFile
   public File getNotarizedDMG() {
-    return new File(outdir, getAppName() + ".dmg");
+    return new File(getOutdir(), getAppName() + ".dmg");
   }
 
   /** A tar.gz file containing the signed app. */
   @OutputFile
   public File getSignedAndNotarizedMacAppTarGz() {
-    return new File(outdir, getAppName() + ".tgz");
+    return new File(getOutdir(), getAppName() + ".tgz");
   }
 
   // ===============================================================================================
@@ -144,7 +304,7 @@ public class SignAndNotarize extends DefaultTask {
       // Mark the temporary certificate to be deleted after use.
       deleteCertificateAfter = true;
       // Decode and write the file.
-      File outfile = new File(outdir, "certificate.p12");
+      File outfile = new File(getOutdir(), "certificate.p12");
       byte[] decodedBytes = Base64.getDecoder().decode(data);
       try (FileOutputStream outputStream = new FileOutputStream(outfile)) {
         outputStream.write(decodedBytes);
@@ -163,7 +323,7 @@ public class SignAndNotarize extends DefaultTask {
    * If it does not exist, decode it from <em>$APPLE_SIGNING_PASSWORD_BASE64</em>. If this does also
    * not exist, return {@link null}.
    */
-  private String getCertificatePassword() {
+  private String loadCertificatePasswordFromEnv() {
     String pw;
     if ((pw = System.getenv("APPLE_SIGNING_PASSWORD")) != null) return pw.strip();
 
@@ -178,17 +338,9 @@ public class SignAndNotarize extends DefaultTask {
     return null;
   }
 
-  /** The task that generates the mac app. Will be used when the task is run to read variables. */
-  private Task macAppTask = getProject().getTasks().findByName("macApp");
-
   /** Get the directory that the mac app is in. */
   private File getMacAppDirectory() {
-    return new File((String) macAppTask.property("outdir"));
-  }
-
-  /** Get the name of the app without the extension. */
-  private String getAppName() {
-    return (String) macAppTask.property("appName");
+    return unsignedMacAppDirectory.get().getAsFile();
   }
 
   /** Get the path to the unsigned app. */
@@ -223,22 +375,18 @@ public class SignAndNotarize extends DefaultTask {
     List<String> keychains =
         Stream.of(Shell.sh("security", "list-keychains", "-d", "user").getLines())
             .map(
-                l -> {
-                  return l.replaceAll("^.*?([^\\/]+.keychain).*$", "$1")
-                      .replace(keychainName, "") // filter the custom keychain
-                      .strip();
-                })
-            .filter(
-                l -> {
-                  return !l.isEmpty();
-                })
+                l ->
+                    l.replaceAll("^.*?([^/]+.keychain).*$", "$1")
+                        .replace(getKeychainName(), "") // filter the custom keychain
+                        .strip())
+            .filter(l -> !l.isEmpty())
             .collect(Collectors.toList());
 
     // Add the custom keychain to the list.
-    if (addInCustomKeychain) keychains.add(keychainName);
+    if (addInCustomKeychain) keychains.add(getKeychainName());
 
     // Weirdly construct the command to circumvent Java’s lack of array unpacking.
-    List<String> cmd = new ArrayList<String>();
+    List<String> cmd = new ArrayList<>();
     cmd.addAll(Arrays.asList("security", "list-keychains", "-d", "user", "-s"));
     cmd.addAll(keychains);
     Shell.sh(cmd.toArray(new String[0]));
@@ -248,7 +396,7 @@ public class SignAndNotarize extends DefaultTask {
    * Unlock the keychain. This is probably called way more often than needed, but better be safe.
    */
   private void unlockKeychain() {
-    Shell.sh("security", "unlock-keychain", "-p", keychainPassword, keychainName);
+    Shell.sh("security", "unlock-keychain", "-p", getKeychainPassword(), getKeychainName());
   }
 
   /**
@@ -262,8 +410,10 @@ public class SignAndNotarize extends DefaultTask {
     if (Shell.test("security", "find-certificate", "-c", label)) return;
 
     // Define our temporary file and clean it up if it exists.
-    File out = new File(outdir, "tmp.cer");
-    if (out.exists()) out.delete();
+    File out = new File(getOutdir(), "tmp.cer");
+    if (out.exists() && !out.delete()) {
+      throw new IllegalStateException("Could not delete temporary certificate: " + out);
+    }
 
     // Escape spaces
     String cer = out.getAbsolutePath().replace(" ", "\\ ");
@@ -271,12 +421,14 @@ public class SignAndNotarize extends DefaultTask {
     // Download the certificate
     Shell.sh("curl", "-s", "-o", cer, url);
     // Import it into our keychain
-    Shell.sh("security", "import", cer, "-t", "cert", "-k", keychainName, "-A");
+    Shell.sh("security", "import", cer, "-t", "cert", "-k", getKeychainName(), "-A");
     // Import it into the login keychain
     Shell.sh("security", "import", cer, "-t", "cert", "-k", "login.keychain", "-A");
 
     // clean up the certificate. No need to have it laying about.
-    if (out.exists()) out.delete();
+    if (out.exists() && !out.delete()) {
+      throw new IllegalStateException("Could not delete temporary certificate: " + out);
+    }
   }
 
   /**
@@ -315,28 +467,28 @@ public class SignAndNotarize extends DefaultTask {
   /** Delete the old keychain if it is around and create a new one that matches. */
   private void setupKeychains() {
     headline("Setting up Keychain");
-    if (keychainName == "login.keychain") {
+    if (getKeychainName().equals("login.keychain")) {
       logger.info("Using login keychain, no setup will occurr");
       return;
     }
 
     // Delete remnant keychain if it exists
-    if (Shell.sh("security", "list-keychains").out.contains(keychainName)) {
+    if (Shell.sh("security", "list-keychains").out.contains(getKeychainName())) {
       logger.info("Existing keychain found, deleting first.");
       unlockKeychain();
-      Shell.sh("security", "delete-keychain", keychainName);
+      Shell.sh("security", "delete-keychain", getKeychainName());
     }
 
     // Create new keychain
-    Shell.sh("security", "create-keychain", "-p", keychainPassword, keychainName);
+    Shell.sh("security", "create-keychain", "-p", getKeychainPassword(), getKeychainName());
 
     // Add it to the search list
     updateKeychains(true);
 
     // https://developer.apple.com/forums/thread/712005
-    Shell.sh("security", "unlock-keychain", "-p", keychainPassword, keychainName);
-    Shell.sh("security", "set-keychain-settings", "-lut", "1000000", keychainName);
-    Shell.sh("security", "unlock-keychain", "-p", keychainPassword, keychainName);
+    Shell.sh("security", "unlock-keychain", "-p", getKeychainPassword(), getKeychainName());
+    Shell.sh("security", "set-keychain-settings", "-lut", "1000000", getKeychainName());
+    Shell.sh("security", "unlock-keychain", "-p", getKeychainPassword(), getKeychainName());
   }
 
   /** Import root certificates required for signing: https://stackoverflow.com/questions/69464483 */
@@ -357,7 +509,7 @@ public class SignAndNotarize extends DefaultTask {
   /** Import the signing certificate */
   private void importSigningCertificate() {
     headline("Importing Certificate");
-    if (certificate == null) {
+    if (getCertificate() == null) {
       logger.info("No certificate specified, skipping");
       return;
     }
@@ -365,11 +517,11 @@ public class SignAndNotarize extends DefaultTask {
     Shell.sh(
         "security",
         "import",
-        certificate,
+        getCertificate(),
         "-k",
-        keychainName,
+        getKeychainName(),
         "-P",
-        certificatePassword,
+        getCertificatePassword(),
         "-A", // Mark it for access by all apps.
         "-T",
         "/usr/bin/productsign", // Mark it for access by productsign.
@@ -392,13 +544,13 @@ public class SignAndNotarize extends DefaultTask {
         "-S",
         "apple-tool:,apple:,codesign:",
         "-k",
-        keychainPassword,
-        keychainName);
+        getKeychainPassword(),
+        getKeychainName());
 
     // Check that this worked
     unlockKeychain();
     String testresult = Shell.sh("security", "find-identity", "-p", "codesigning").out;
-    if (!testresult.contains(appleSignID)) {
+    if (!testresult.contains(getAppleSignID())) {
       throw new GradleException("Code signing identity cannot be found.");
     }
   }
@@ -416,18 +568,18 @@ public class SignAndNotarize extends DefaultTask {
   /** Codesign a specific file. */
   private void codesign(File file, boolean verify) {
     String signPath = file.getAbsolutePath();
-    headline("Code-Signing " + outdir.toPath().relativize(file.toPath()));
+    headline("Code-Signing " + getOutdir().toPath().relativize(file.toPath()));
     unlockKeychain();
     Shell.sh(
         "codesign",
         "--keychain",
-        keychainName,
+        getKeychainName(),
         "--force",
         "--verbose",
         "--options",
         "runtime",
         "--sign",
-        appleSignID,
+        getAppleSignID(),
         signPath);
 
     // Evaluate the result. These can throw errors if something went wrong – and abort the process.
@@ -452,17 +604,14 @@ public class SignAndNotarize extends DefaultTask {
             ".kext",
             ".appex",
             ".xcframework");
-    try {
-      Files.find(
-              appDir.toPath(),
-              16,
-              (path, attrs) ->
-                  extensions.stream().anyMatch(extension -> path.toString().endsWith(extension))
-                      && path != appDir.toPath())
-          .forEach(
-              p -> {
-                codesign(p.toFile(), false);
-              });
+    try (Stream<Path> stream =
+        Files.find(
+            appDir.toPath(),
+            16,
+            (path, attrs) ->
+                extensions.stream().anyMatch(extension -> path.toString().endsWith(extension))
+                    && path != appDir.toPath())) {
+      stream.forEach(p -> codesign(p.toFile(), false));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -475,19 +624,21 @@ public class SignAndNotarize extends DefaultTask {
     headline("Create DMG");
     // Install the required tools, if they are not already installed.
     ensureElectronInstallerDMG();
-    String titleCandidate = getAppName() + ' ' + getProject().getVersion().toString();
+    String titleCandidate = getAppName() + ' ' + getProjectVersion();
     if (titleCandidate.length() > 27 && titleCandidate.contains("-SNAPSHOT"))
       titleCandidate = titleCandidate.replace("-SNAPSHOT", "β");
-    if (titleCandidate.length() > 26) // Worried about unicode here so one character of margin
-    titleCandidate = titleCandidate.substring(0, 26);
+    if (titleCandidate.length() > 26) {
+      // Worried about unicode here so one character of margin
+      titleCandidate = titleCandidate.substring(0, 26);
+    }
     // Different calls with or without icon.
-    if (dmgIcon == null)
+    if (getDmgIcon() == null)
       Shell.sh(
           "electron-installer-dmg",
           "--title",
           titleCandidate,
           "--out",
-          outdir.getAbsolutePath(),
+          getOutdir().getAbsolutePath(),
           "--overwrite",
           getSignedAndNotarizedMacApp().getAbsolutePath(),
           getAppName());
@@ -497,9 +648,9 @@ public class SignAndNotarize extends DefaultTask {
           "--title",
           titleCandidate,
           "--out",
-          outdir.getAbsolutePath(),
+          getOutdir().getAbsolutePath(),
           "--icon",
-          dmgIcon,
+          getDmgIcon(),
           "--overwrite",
           getSignedAndNotarizedMacApp().getAbsolutePath(),
           getAppName());
@@ -515,7 +666,7 @@ public class SignAndNotarize extends DefaultTask {
     headline("Code-Signing DMG");
     String dmgPath = getNotarizedDMG().getAbsolutePath();
     Shell.sh(
-        "codesign", "--force", "--verbose", "--options", "runtime", "--sign", appleSignID, dmgPath);
+        "codesign", "--force", "--verbose", "--options", "runtime", "--sign", getAppleSignID(), dmgPath);
     // Confirm that this worked. Throw an error otherwise.
     Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", dmgPath);
   }
@@ -531,11 +682,11 @@ public class SignAndNotarize extends DefaultTask {
         dmgPath,
         "--wait",
         "--apple-id",
-        appleIDUser,
+        getAppleIDUser(),
         "--password",
-        appleIDPassword,
+        getAppleIDPassword(),
         "--team-id",
-        appleIDTeamID);
+        getAppleIDTeamID());
 
     // validate. Throw an error if the validation did not work.
     Shell.sh("spctl", "-a", "-t", "install", "-vv", dmgPath);
@@ -566,18 +717,18 @@ public class SignAndNotarize extends DefaultTask {
     headline("Cleanup");
     // Delete the certificate from the keychain. The keychain potentially is the login keychain. The
     // certificate must not remain there!
-    Shell.failOk("security", "delete-certificate", "-c", appleSignID);
+    Shell.failOk("security", "delete-certificate", "-c", getAppleSignID());
 
     // Delete the keychain if it is not the login keychain.
-    if (!keychainName.equals("login.keychain")) {
+    if (!getKeychainName().equals("login.keychain")) {
       unlockKeychain();
-      Shell.failOk("security", "delete-keychain", keychainName);
+      Shell.failOk("security", "delete-keychain", getKeychainName());
       // Remove the custom keychain from the search list.
       updateKeychains(false);
     }
 
     // Delete the certificate
-    if (deleteCertificateAfter) Shell.failOk("rm", certificate);
+    if (deleteCertificateAfter && getCertificate() != null) Shell.failOk("rm", getCertificate());
   }
 
   /** The execution of the task. */
@@ -591,20 +742,22 @@ public class SignAndNotarize extends DefaultTask {
     }
 
     // Make sure, that all variables are set. Set them now from runtime properties or environment.
-    if (certificate == null) certificate = getCertificateFilePath();
-    if (certificate == null)
+    if (getCertificate() == null) setCertificate(getCertificateFilePath());
+    if (getCertificate() == null)
       throw new InvalidUserDataException("Required property 'certificate' not set.");
 
-    if (certificatePassword == null)
+    if (getCertificatePassword() == null)
       throw new InvalidUserDataException("Required property 'certificatePassword' not set.");
-    if (appleSignID == null)
+    if (getAppleSignID() == null)
       throw new InvalidUserDataException("Required property 'appleSignID' not set.");
 
-    if (dmgIcon == null) dmgIcon = (String) macAppTask.property("icon");
+    if (getDmgIcon() == null) setDmgIcon(getMacAppIcon());
 
     // Create the outdir. Delete it, if it is still around.
-    if (outdir.exists()) outdir.delete();
-    outdir.mkdirs();
+    if (getOutdir().exists()) FileUtils.deleteRecursively(getOutdir());
+    if (!getOutdir().mkdirs()) {
+      throw new IllegalStateException("Could not create output directory: " + getOutdir());
+    }
 
     // For better documentation of the individual steps, read the descriptions of the methods.
     try {
