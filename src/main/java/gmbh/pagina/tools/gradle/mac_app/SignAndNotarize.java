@@ -21,10 +21,13 @@ import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -102,6 +105,7 @@ public class SignAndNotarize extends DefaultTask {
   private final Property<String> appName = getProject().getObjects().property(String.class);
   private final DirectoryProperty unsignedMacAppDirectory =
       getProject().getObjects().directoryProperty();
+  private final DirectoryProperty existingMacAppBundle = getProject().getObjects().directoryProperty();
   private final Property<String> macAppIcon = getProject().getObjects().property(String.class);
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
 
@@ -109,10 +113,10 @@ public class SignAndNotarize extends DefaultTask {
     keychainName.convention("TemporaryPaginaSigningKeychain.keychain");
     keychainPassword.convention("TotallySecretPassword");
     certificatePassword.convention(loadCertificatePasswordFromEnv());
-    appleSignID.convention(System.getenv("APPLE_SIGN_ID"));
-    appleIDUser.convention(System.getenv("APPLE_ID_USER"));
-    appleIDPassword.convention(System.getenv("APPLE_ID_PASSWORD"));
-    appleIDTeamID.convention(System.getenv("APPLE_ID_TEAM_ID"));
+    appleSignID.convention(getProject().getProviders().environmentVariable("APPLE_SIGN_ID"));
+    appleIDUser.convention(getProject().getProviders().environmentVariable("APPLE_ID_USER"));
+    appleIDPassword.convention(getProject().getProviders().environmentVariable("APPLE_ID_PASSWORD"));
+    appleIDTeamID.convention(getProject().getProviders().environmentVariable("APPLE_ID_TEAM_ID"));
     outdir.convention(getProject().getLayout().getBuildDirectory().dir("signedMacApp"));
   }
 
@@ -209,16 +213,62 @@ public class SignAndNotarize extends DefaultTask {
 
   @Input
   public String getAppName() {
-    return appName.get();
+    if (appName.isPresent()) return appName.get();
+    return getInputAppBundleName();
   }
 
-  public void setAppName(String appName) {
-    this.appName.set(appName);
-  }
 
   @Internal
   public DirectoryProperty getUnsignedMacAppDirectoryProperty() {
     return unsignedMacAppDirectory;
+  }
+
+  /** Determine the bundle name from the configured input app path. */
+  private String getInputAppBundleName() {
+    File inputApp = existingMacAppBundle.isPresent() ? existingMacAppBundle.get().getAsFile() : null;
+    if (inputApp == null) {
+      if (!unsignedMacAppDirectory.isPresent()) {
+        throw new InvalidUserDataException(
+            "Cannot determine appName: set existingMacAppBundle or configure unsignedMacAppDirectory.");
+      }
+      inputApp = new File(getMacAppDirectory(), getAppNameFromUnsignedBundleFallback());
+    }
+    String name = inputApp.getName();
+    if (name.endsWith(".app")) return name.substring(0, name.length() - 4);
+    return name;
+  }
+
+  /** Derive the unsigned bundle name from the task state when appName is not configured. */
+  private String getAppNameFromUnsignedBundleFallback() {
+    if (appName.isPresent()) return appName.get();
+    throw new InvalidUserDataException(
+        "Cannot determine appName: configure appName for unsigned signing, or set existingMacAppBundle.");
+  }
+
+  /**
+   * Optional path to an existing .app bundle to sign/notarize directly.
+   *
+   * <p>If this is set, the task uses this bundle as input instead of resolving
+   * {@code unsignedMacAppDirectory/appName.app}.
+   */
+  @InputDirectory
+  @Optional
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public File getExistingMacAppBundle() {
+    return existingMacAppBundle.isPresent() ? existingMacAppBundle.get().getAsFile() : null;
+  }
+
+  public void setExistingMacAppBundle(String existingMacAppBundle) {
+    this.existingMacAppBundle.fileValue(new File(existingMacAppBundle));
+  }
+
+  public void setExistingMacAppBundle(File existingMacAppBundle) {
+    this.existingMacAppBundle.fileValue(existingMacAppBundle);
+  }
+
+  @Internal
+  public DirectoryProperty getExistingMacAppBundleProperty() {
+    return existingMacAppBundle;
   }
 
   @Input
@@ -350,6 +400,9 @@ public class SignAndNotarize extends DefaultTask {
 
   /** Get the path to the unsigned app. */
   private File getUnsignedMacApp() {
+    if (existingMacAppBundle.isPresent()) {
+      return existingMacAppBundle.get().getAsFile();
+    }
     return new File(getMacAppDirectory(), getAppName() + ".app");
   }
 
@@ -531,8 +584,16 @@ public class SignAndNotarize extends DefaultTask {
   /** Copy the app from the unsigned output directory to the one where it will be signed. */
   private void copyAppOver() {
     headline("Copy unsigned app to signing directory");
+    File inputApp = getUnsignedMacApp();
+    if (!inputApp.exists()) {
+      throw new InvalidUserDataException("Could not find input app bundle: " + inputApp);
+    }
+    if (!inputApp.getName().endsWith(".app")) {
+      throw new InvalidUserDataException(
+          "Input app bundle must have the .app suffix: " + inputApp);
+    }
     try {
-      FileUtils.copyDir(getUnsignedMacApp(), getSignedAndNotarizedMacApp());
+      FileUtils.copyDir(inputApp, getSignedAndNotarizedMacApp());
     } catch (IOException e) {
       throw new GradleScriptException("IOException", e);
     }
@@ -705,13 +766,16 @@ public class SignAndNotarize extends DefaultTask {
       String resolvedCertificate = getCertificateFilePath();
       if (resolvedCertificate != null) setCertificate(resolvedCertificate);
     }
-    if (getCertificate() == null)
-      throw new InvalidUserDataException("Required property 'certificate' not set.");
-
-    if (getCertificatePassword() == null)
+    if (getCertificate() != null && getCertificatePassword() == null)
       throw new InvalidUserDataException("Required property 'certificatePassword' not set.");
     if (getAppleSignID() == null)
       throw new InvalidUserDataException("Required property 'appleSignID' not set.");
+    if (getAppleIDUser() == null)
+      throw new InvalidUserDataException("Required property 'appleIDUser' not set.");
+    if (getAppleIDPassword() == null)
+      throw new InvalidUserDataException("Required property 'appleIDPassword' not set.");
+    if (getAppleIDTeamID() == null)
+      throw new InvalidUserDataException("Required property 'appleIDTeamID' not set.");
 
 
     // For better documentation of the individual steps, read the descriptions of the methods.

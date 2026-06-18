@@ -159,7 +159,8 @@ public class JASDownloader extends DefaultTask {
   /** Download the zip or shell file. */
   private void download() {
     File destination = isUnzip() ? getZipFile() : getTargetFile();
-    DownloadUtils.downloadHttpToFile(getSourceUrl().get(), destination.toPath(), "Java application stub");
+    DownloadUtils.downloadHttpToFile(
+        getSourceUrl().get(), destination.toPath(), "Java application stub");
   }
 
   /** Unzip the zip file. */

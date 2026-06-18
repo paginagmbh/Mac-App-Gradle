@@ -303,6 +303,9 @@ The archive is produced by the separate `signedAndNotarizedMacAppArchive` task,
 which `signedAndNotarizedMacApp` finalizes automatically.
 All required arguments can also be set via environment variables to make CI integration easier.
 
+Signing credentials are configured on the signing task itself.
+At these points, any of the values may be replaced by environment variables instead of being set directly in Gradle.
+
 
 #### Arguments
 
@@ -369,6 +372,16 @@ If not provided as a Groovy argument, it is read from the *$APPLE_ID_TEAM_ID* en
 Example: *"ASDF213FDSA"*
 
 
+**existingMacAppBundle** (Optional, default: `null`)
+
+Path to an existing `.app` bundle that should be signed/notarized directly.
+If set, the signing task uses this bundle as input instead of
+*unsignedMacAppDirectory/appName.app*.
+This is the same `signedAndNotarizedMacApp` task; the input bundle is just overridden.
+
+Example: `"${projectDir}/dist/Example App.app"`
+
+
 **outdir** (Optional, default: `"${buildDir}/signedMacApp"`)
 
 
@@ -388,6 +401,32 @@ For compatibility, the task still exposes *signedAndNotarizedMacAppTarGz* as the
 
 Creates a *.tar.gz* archive from the signed and notarized *.app* bundle.
 This task depends on `signedAndNotarizedMacApp`, so running it directly will perform signing/notarization first.
+
+
+### Using `signedAndNotarizedMacApp` with an existing `.app`
+
+```bash
+./gradlew signedAndNotarizedMacApp
+```
+
+```groovy
+signedAndNotarizedMacApp {
+    existingMacAppBundle = "${projectDir}/dist/Example App.app"
+
+    // Signing credentials can be configured directly or via environment variables.
+    appleSignID = providers.environmentVariable("APPLE_SIGN_ID").orElse("Developer ID Application: ...").getOrNull()
+    appleIDUser = providers.environmentVariable("APPLE_ID_USER").orElse("apple@example.com").getOrNull()
+    appleIDPassword = providers.environmentVariable("APPLE_ID_PASSWORD").orElse("app-specific-password").getOrNull()
+    appleIDTeamID = providers.environmentVariable("APPLE_ID_TEAM_ID").orElse("ASDF213FDSA").getOrNull()
+}
+```
+
+If any of these values are not set in Gradle, the plugin can also read them from the corresponding environment variables.
+
+**Note:**
+This flow performs re-signing.
+Existing signatures in the copied app bundle are replaced (`codesign --force`).
+The original app referenced by `existingMacAppBundle` is not modified; signing happens on the copy in `outdir`.
 
 
 ## errSecInternalComponent
