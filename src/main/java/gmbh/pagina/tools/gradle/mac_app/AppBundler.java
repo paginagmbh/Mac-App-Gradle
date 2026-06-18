@@ -56,13 +56,16 @@ public class AppBundler extends DefaultTask {
   private final DirectoryProperty outdir = getProject().getObjects().directoryProperty();
 
   /** The package signature (customizable, autocomputed from appName) for the CFBundleIdentifier. */
-  private final Property<String> pkgInfoSignature = getProject().getObjects().property(String.class);
+  private final Property<String> pkgInfoSignature =
+      getProject().getObjects().property(String.class);
 
   /** The development region for CFBundleDevelopmentRegion (customizable, optional) (en, de, …). */
-  private final Property<String> developmentRegion = getProject().getObjects().property(String.class);
+  private final Property<String> developmentRegion =
+      getProject().getObjects().property(String.class);
 
   /** The CFBundleIdentifier (customizable, auto). Computed from the main class’s parent package. */
-  private final Property<String> bundleIdentifier = getProject().getObjects().property(String.class);
+  private final Property<String> bundleIdentifier =
+      getProject().getObjects().property(String.class);
 
   /** A copyright string (customizable, optional) for NSHumanReadableCopyright. */
   private final Property<String> copyright = getProject().getObjects().property(String.class);
@@ -78,10 +81,30 @@ public class AppBundler extends DefaultTask {
   private final ListProperty<String> viewableDocumentTypes =
       getProject().getObjects().listProperty(String.class);
 
+  /** Java system properties for JavaX/Properties (for example <code>-Dfoo=bar</code>). */
+  private final ListProperty<String> javaProperties =
+      getProject().getObjects().listProperty(String.class);
+
+  /** JavaX VMOptions entries (for example <code>-Xmx512m</code>). */
+  private final ListProperty<String> vmOptions =
+      getProject().getObjects().listProperty(String.class);
+
+  /** JavaX main class arguments. */
+  private final ListProperty<String> mainArguments =
+      getProject().getObjects().listProperty(String.class);
+
+  /** Whether JavaX should launch on the macOS main thread. */
+  private final Property<Boolean> startOnMainThread =
+      getProject().getObjects().property(Boolean.class);
+
+  /** Optional JavaX splash file name from the app Resources folder. */
+  private final Property<String> splashFile = getProject().getObjects().property(String.class);
+
   private final Property<String> mainClassName = getProject().getObjects().property(String.class);
   private final Property<String> projectName = getProject().getObjects().property(String.class);
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
-  private final Property<Integer> targetJavaVersion = getProject().getObjects().property(Integer.class);
+  private final Property<Integer> targetJavaVersion =
+      getProject().getObjects().property(Integer.class);
   private final ConfigurableFileCollection javaApplicationStubFiles = getProject().files();
   private final ConfigurableFileCollection mainJarFiles = getProject().files();
   private final ConfigurableFileCollection runtimeClasspath = getProject().files();
@@ -184,6 +207,67 @@ public class AppBundler extends DefaultTask {
   }
 
   @Input
+  @Optional
+  public java.util.List<String> getJavaProperties() {
+    return javaProperties.getOrNull();
+  }
+
+  public void setJavaProperties(String[] javaProperties) {
+    this.javaProperties.set(java.util.Arrays.asList(javaProperties));
+  }
+
+  public void setJavaProperties(java.util.List<String> javaProperties) {
+    this.javaProperties.set(javaProperties);
+  }
+
+  @Input
+  @Optional
+  public java.util.List<String> getVmOptions() {
+    return vmOptions.getOrNull();
+  }
+
+  public void setVmOptions(String[] vmOptions) {
+    this.vmOptions.set(java.util.Arrays.asList(vmOptions));
+  }
+
+  public void setVmOptions(java.util.List<String> vmOptions) {
+    this.vmOptions.set(vmOptions);
+  }
+
+  @Input
+  @Optional
+  public java.util.List<String> getMainArguments() {
+    return mainArguments.getOrNull();
+  }
+
+  public void setMainArguments(String[] mainArguments) {
+    this.mainArguments.set(java.util.Arrays.asList(mainArguments));
+  }
+
+  public void setMainArguments(java.util.List<String> mainArguments) {
+    this.mainArguments.set(mainArguments);
+  }
+
+  @Input
+  @Optional
+  public Boolean getStartOnMainThread() {
+    return startOnMainThread.getOrNull();
+  }
+
+  public void setStartOnMainThread(Boolean startOnMainThread) {
+    this.startOnMainThread.set(startOnMainThread);
+  }
+
+  @Internal
+  public String getSplashFile() {
+    return splashFile.getOrNull();
+  }
+
+  public void setSplashFile(String splashFile) {
+    this.splashFile.set(splashFile);
+  }
+
+  @Input
   public String getMainClassName() {
     return mainClassName.get();
   }
@@ -271,6 +355,31 @@ public class AppBundler extends DefaultTask {
     return targetJavaVersion;
   }
 
+  @Internal
+  public ListProperty<String> getJavaPropertiesProperty() {
+    return javaProperties;
+  }
+
+  @Internal
+  public ListProperty<String> getVmOptionsProperty() {
+    return vmOptions;
+  }
+
+  @Internal
+  public ListProperty<String> getMainArgumentsProperty() {
+    return mainArguments;
+  }
+
+  @Internal
+  public Property<Boolean> getStartOnMainThreadProperty() {
+    return startOnMainThread;
+  }
+
+  @Internal
+  public Property<String> getSplashFileProperty() {
+    return splashFile;
+  }
+
   @Optional
   @InputFile
   @PathSensitive(PathSensitivity.RELATIVE)
@@ -286,6 +395,33 @@ public class AppBundler extends DefaultTask {
     java.util.List<String> resources = getAdditionalResources();
     if (resources == null) return getProject().files();
     return getProject().files((Object[]) resources.toArray(new String[0]));
+  }
+
+  @Optional
+  @InputFile
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public File getSplashFileInput() {
+    String splashPath = getSplashFile();
+    return splashPath == null ? null : new File(splashPath);
+  }
+
+  @Optional
+  @InputFile
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public File getSplashFile2xInput() {
+    File splash = getSplashFileInput();
+    if (splash == null) return null;
+
+    String splashName = splash.getName();
+    int dot = splashName.lastIndexOf('.');
+    String basename = dot >= 0 ? splashName.substring(0, dot) : splashName;
+    String extension = dot >= 0 ? splashName.substring(dot) : "";
+    String splash2xName = basename + "@2x" + extension;
+    File splash2x =
+        splash.getParent() == null
+            ? new File(splash2xName)
+            : new File(splash.getParent(), splash2xName);
+    return splash2x.isFile() ? splash2x : null;
   }
 
   /** The logger to use for file logging */
@@ -323,8 +459,8 @@ public class AppBundler extends DefaultTask {
   }
 
   @Internal
-  public JavaApplicationStubSource getNativeJavaApplicationStubv0_9() {
-    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9;
+  public JavaApplicationStubSource getNativeJavaApplicationStubv1() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1;
   }
 
   /** The app bundle that is generated. */
@@ -457,6 +593,18 @@ public class AppBundler extends DefaultTask {
       }
     }
 
+    // Copy splash file to the resources directory when configured.
+    String splashFileName = null;
+    if (getSplashFile() != null) {
+      File splash = new File(getSplashFile());
+      splashFileName = splash.getName();
+      FileUtils.copyToDir(splash, resources);
+
+      // Copy the optional retina variant when it sits next to the base splash image.
+      File splash2x = getSplashFile2xInput();
+      if (splash2x != null) FileUtils.copyToDir(splash2x, resources);
+    }
+
     // Get the jar task
     // Copy the main jar and mark it as executable
     File mainJar = new File(javaDir, getProjectName() + ".jar");
@@ -493,8 +641,12 @@ public class AppBundler extends DefaultTask {
     // Settings for the universal java application stub.
     infoPlist.javaX(
         getMainClassName(),
-        mainJar.getName(),
-        getTargetJavaVersion());
+        getTargetJavaVersion(),
+        getJavaProperties(),
+        getVmOptions(),
+        getStartOnMainThread(),
+        getMainArguments(),
+        splashFileName);
     // Save the Info.plist object.
     try {
       infoPlist.save(new File(contents, "Info.plist"));

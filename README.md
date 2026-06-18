@@ -4,7 +4,7 @@ A Gradle plugin that creates and signs Mac apps.
 Must be run on a Mac.
 An unsigned Mac app can also be built on Linux/WSL.
 
-This task can be run locally but it is primarily intended for CI use.
+This task can be run locally, but it is primarily intended for CI use.
 For this it will install some requirements as follows:
 
 * It requires [electron-installer-dmg](https://github.com/electron-userland/electron-installer-dmg) for creating a DMG file which can be notarized.
@@ -60,9 +60,9 @@ This plugin consists of task steps that are executed in order.
 ```groovy
 javaApplicationStub {
     // No manual settings required. These are the defaults:
-    source = nativeJavaApplicationStubv0_9
+    source = nativeJavaApplicationStubv1
     // equivalent explicit values:
-    // url = "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v0.9/NativeJavaApplicationStub"
+    // url = "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v1.0/NativeJavaApplicationStub"
     // unzip = false
     // executableName = "NativeJavaApplicationStub"
     // outdir = "${buildDir}/javaApplicationStub"
@@ -72,13 +72,13 @@ javaApplicationStub {
 
 #### Arguments
 
-**source** (Optional, default: `nativeJavaApplicationStubv0_9`)
+**source** (Optional, default: `nativeJavaApplicationStubv1`)
 
 Built-in source presets:
 
 * `universalJavaApplicationStubShell`
 * `universalJavaApplicationStubProcompiled`
-* `nativeJavaApplicationStubv0_9`
+* `nativeJavaApplicationStubv1`
 
 Repositories:
 
@@ -211,6 +211,75 @@ Example: `["${projectDir}/src/build/Assets.car"]`
 UTIs for document types that can be opened in this app.
 
 Example: `["public.plain-text", "public.log"]`
+
+
+**javaProperties** (Optional, default: derived from `application.applicationDefaultJvmArgs`)
+
+Java `-D...` system properties written into the JavaX `Properties` dictionary in `Info.plist`.
+By default, all `-D...` entries from `application.applicationDefaultJvmArgs` are used.
+
+Example: `["-Dfile.encoding=UTF-8", "-Dmy.flag=true"]`
+
+
+**vmOptions** (Optional, default: derived from `application.applicationDefaultJvmArgs`)
+
+Additional Java VM options written into JavaX `VMOptions` in `Info.plist`.
+By default, all non-`-D...` entries from `application.applicationDefaultJvmArgs` are used.
+
+Example: `["-Xmx1g", "-XX:+UseG1GC"]`
+
+
+**startOnMainThread** (Optional, default: `null`)
+
+If set to `true`, writes JavaX `StartOnMainThread` to enable launch on the macOS main thread
+(mapped by the stub to `-XstartOnFirstThread`).
+
+Example: `true`
+
+
+**mainArguments** (Optional, default: `null`)
+
+Arguments written into JavaX `Arguments` and passed to the application's main class at startup.
+
+Example: `["--profile", "prod"]`
+
+
+**splashFile** (Optional, default: `null`)
+
+Path to an image file written to JavaX `SplashFile`.
+If set, the file is copied automatically into the app `Contents/Resources` directory,
+and the plist stores the bundled file name.
+If a sibling file with the same name plus `@2x` before the extension exists,
+it is copied as well (for example `splash.png` -> `splash@2x.png`).
+
+Example: `"${projectDir}/src/build/splash.png"`
+
+
+#### JavaX Example (JVM args + startup flags)
+
+```groovy
+application {
+    mainClass = 'com.company.package.Class'
+
+    // These defaults are forwarded into JavaX:
+    // -D... -> JavaX/Properties
+    // others -> JavaX/VMOptions
+    applicationDefaultJvmArgs = [
+        '-Dfile.encoding=UTF-8',
+        '-Dmy.feature=true',
+        '-Xmx1g'
+    ]
+}
+
+macApp {
+    appName = 'Example App'
+
+    // Optional JavaX additions
+    startOnMainThread = true
+    mainArguments = ['--profile', 'prod']
+    splashFile = "${projectDir}/src/build/splash.png"
+}
+```
 
 
 #### API
@@ -413,6 +482,22 @@ public static final String version = meta.getString("version");
 /** The app’s display name. */
 public static final String name = meta.getString("name");
 ```
+
+
+## Changelog
+
+### 2.0.0
+
+* Added dedicated archive tasks: `macAppArchive` and `signedAndNotarizedMacAppArchive`.
+  The main tasks `macApp` and `signedAndNotarizedMacApp` now finalize the archive tasks, so the archive is generated automatically after the app bundle.
+* `javaApplicationStub` task is now cacheable to improve repeated build performance.
+* Use of [NativeJavaApplicationStub](https://github.com/paginagmbh/NativeJavaApplicationStub) as default source.
+* Added JavaX-related `macApp` properties: `javaProperties`, `vmOptions`, `startOnMainThread`, `mainArguments`, and `splashFile`. `vmOptions`/`javaProperties` now default from `application.applicationDefaultJvmArgs`.
+
+
+### 1.x.x
+
+* Initial version.
 
 
 ## (internal only) Publish New Versions

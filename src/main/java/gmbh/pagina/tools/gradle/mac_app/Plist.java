@@ -115,20 +115,62 @@ public class Plist {
     return doc.createElement(Boolean.toString(value));
   }
 
+  /** Add an array entry with string values to a parent dictionary. */
+  private void createArrayEntry(Node parent, String key, java.util.List<String> values) {
+    if (values == null || values.isEmpty()) return;
+    addKey(parent, key);
+    Element array = doc.createElement("array");
+    for (String value : values) addString(array, value);
+    parent.appendChild(array);
+  }
+
+  /** Add a Properties dictionary entry from JVM args like <code>-Dkey=value</code>. */
+  private void createPropertiesEntry(Node parent, java.util.List<String> properties) {
+    if (properties == null || properties.isEmpty()) return;
+    Element propertyDict = doc.createElement("dict");
+
+    for (String property : properties) {
+      if (property == null || !property.startsWith("-D") || property.length() <= 2) continue;
+
+      String body = property.substring(2);
+      int separator = body.indexOf('=');
+      String propertyKey = separator >= 0 ? body.substring(0, separator) : body;
+      String propertyValue = separator >= 0 ? body.substring(separator + 1) : "";
+
+      if (!propertyKey.isEmpty()) {
+        addKey(propertyDict, propertyKey);
+        addString(propertyDict, propertyValue);
+      }
+    }
+
+    if (propertyDict.hasChildNodes()) {
+      addKey(parent, "Properties");
+      parent.appendChild(propertyDict);
+    }
+  }
+
   /**
    * Set up the JavaX block to integrate with UniversalJavaApplicationStub.
    *
    * @param mainClass The main class in the format <em>com.package.Class</em>
-   * @param jarName The name of the jar file to call.
    * @param minimumVersion The minimum version of Java required.
    */
-  public void javaX(String mainClass, String jarName, int minimumVersion) {
+  public void javaX(
+      String mainClass,
+      int minimumVersion,
+      java.util.List<String> properties,
+      java.util.List<String> vmOptions,
+      Boolean startOnMainThread,
+      java.util.List<String> mainArguments,
+      String splashFile) {
     // Root javaX key
     addKey("JavaX");
     Element javaX = doc.createElement("dict");
 
     createEntry(javaX, "MainClass", mainClass);
     createEntry(javaX, "JVMVersion", String.valueOf(minimumVersion) + "+");
+    createEntry(javaX, "SplashFile", splashFile);
+    if (startOnMainThread != null) createEntry(javaX, "StartOnMainThread", startOnMainThread);
 
     // Add the elements from the classpath to an array. Assume the live in the java root directory.
     javaX.appendChild(textNode("key", "ClassPath"));
@@ -136,8 +178,10 @@ public class Plist {
     addString(classPath, "$JAVAROOT/*");
     javaX.appendChild(classPath);
 
-    // Add VM options to use UTF 8
-    createEntry(javaX, "VMOptions", "-Dfile.encoding=UTF-8");
+    // Additional JavaX parameters supported by universalJavaApplicationStub.
+    createPropertiesEntry(javaX, properties);
+    createArrayEntry(javaX, "VMOptions", vmOptions);
+    createArrayEntry(javaX, "Arguments", mainArguments);
     root.appendChild(javaX);
   }
 

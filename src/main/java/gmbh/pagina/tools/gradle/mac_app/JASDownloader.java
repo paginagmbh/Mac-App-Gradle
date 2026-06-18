@@ -23,18 +23,18 @@ public class JASDownloader extends DefaultTask {
 
   private final Property<String> sourceUrl = getProject().getObjects().property(String.class);
   private final Property<Boolean> unzip = getProject().getObjects().property(Boolean.class);
-  private final Property<String> stubExecutableName = getProject().getObjects().property(String.class);
+  private final Property<String> stubExecutableName =
+      getProject().getObjects().property(String.class);
   private final DirectoryProperty outdir = getProject().getObjects().directoryProperty();
 
   public JASDownloader() {
     setGroup("Make Mac App");
     setDescription("Download the Java application stub required for the app.");
-    getUnzip().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9.isUnzip());
+    getUnzip().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.isUnzip());
     getStubExecutableName()
-        .convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9.getExecutableName());
-    getSourceUrl().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9.getUrl());
-    getOutdir()
-        .convention(getProject().getLayout().getBuildDirectory().dir("javaApplicationStub"));
+        .convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.getExecutableName());
+    getSourceUrl().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.getUrl());
+    getOutdir().convention(getProject().getLayout().getBuildDirectory().dir("javaApplicationStub"));
   }
 
   @Input
@@ -74,9 +74,7 @@ public class JASDownloader extends DefaultTask {
   @Internal
   public JavaApplicationStubSource getSource() {
     return new JavaApplicationStubSource(
-        getSourceUrl().get(),
-        getUnzip().get(),
-        getStubExecutableName().get());
+        getSourceUrl().get(), getUnzip().get(), getStubExecutableName().get());
   }
 
   /** Convenience task DSL: `source = ...` updates URL, unzip, and executable name together. */
@@ -97,8 +95,8 @@ public class JASDownloader extends DefaultTask {
   }
 
   @Internal
-  public JavaApplicationStubSource getNativeJavaApplicationStubv0_9() {
-    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V0_9;
+  public JavaApplicationStubSource getNativeJavaApplicationStubv1() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1;
   }
 
   @Internal
@@ -134,7 +132,9 @@ public class JASDownloader extends DefaultTask {
   /** The Java application stub file. */
   @OutputFile
   public File getTargetFile() {
-    if (isUnzip()) return new File(new File(getOutdirFile(), getDownloadedBaseName()), getStubExecutableName().get());
+    if (isUnzip())
+      return new File(
+          new File(getOutdirFile(), getDownloadedBaseName()), getStubExecutableName().get());
     return new File(getOutdirFile(), getStubExecutableName().get());
   }
 
@@ -199,6 +199,3 @@ public class JASDownloader extends DefaultTask {
     if (isUnzip()) unzip();
   }
 }
-
-
-

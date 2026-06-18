@@ -17,10 +17,9 @@ public final class JavaApplicationStubPresets {
           true,
           "universalJavaApplicationStub");
 
-  public static final JavaApplicationStubSource NATIVE_JAVA_APPLICATION_STUB_V0_9 =
+  public static final JavaApplicationStubSource NATIVE_JAVA_APPLICATION_STUB_V1 =
       new JavaApplicationStubSource(
-          "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v0.9/NativeJavaApplicationStub",
+          "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v1.0/NativeJavaApplicationStub",
           false,
           "NativeJavaApplicationStub");
 }
-

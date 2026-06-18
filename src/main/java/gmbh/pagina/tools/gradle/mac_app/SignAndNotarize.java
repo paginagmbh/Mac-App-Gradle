@@ -26,13 +26,18 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 /** The task that signs and notarizes the mac app. Only works on macOS. */
+@DisableCachingByDefault(
+    because = "Signing/notarization depends on external services and keychain state")
 public class SignAndNotarize extends DefaultTask {
 
   public SignAndNotarize() {
     setDescription("Sign and notarize the mac .app bundle.");
     setGroup("Make Mac App");
+    // Signing/notarization has external side effects and must not be considered up-to-date.
+    getOutputs().upToDateWhen(task -> false);
   }
 
   /**
@@ -310,6 +315,10 @@ public class SignAndNotarize extends DefaultTask {
       deleteCertificateAfter = true;
       // Decode and write the file.
       File outfile = new File(getOutdir(), "certificate.p12");
+      File parent = outfile.getParentFile();
+      if (parent != null && !parent.exists() && !parent.mkdirs()) {
+        throw new IllegalStateException("Could not create output directory: " + parent);
+      }
       byte[] decodedBytes = Base64.getDecoder().decode(data);
       try (FileOutputStream outputStream = new FileOutputStream(outfile)) {
         outputStream.write(decodedBytes);
@@ -741,8 +750,17 @@ public class SignAndNotarize extends DefaultTask {
       return;
     }
 
+    // Create the outdir first. For base64 certificate input we write a temp .p12 into this folder.
+    if (getOutdir().exists()) FileUtils.deleteRecursively(getOutdir());
+    if (!getOutdir().mkdirs()) {
+      throw new IllegalStateException("Could not create output directory: " + getOutdir());
+    }
+
     // Make sure, that all variables are set. Set them now from runtime properties or environment.
-    if (getCertificate() == null) setCertificate(getCertificateFilePath());
+    if (getCertificate() == null) {
+      String resolvedCertificate = getCertificateFilePath();
+      if (resolvedCertificate != null) setCertificate(resolvedCertificate);
+    }
     if (getCertificate() == null)
       throw new InvalidUserDataException("Required property 'certificate' not set.");
 
@@ -751,13 +769,11 @@ public class SignAndNotarize extends DefaultTask {
     if (getAppleSignID() == null)
       throw new InvalidUserDataException("Required property 'appleSignID' not set.");
 
-    if (getDmgIcon() == null) setDmgIcon(getMacAppIcon());
-
-    // Create the outdir. Delete it, if it is still around.
-    if (getOutdir().exists()) FileUtils.deleteRecursively(getOutdir());
-    if (!getOutdir().mkdirs()) {
-      throw new IllegalStateException("Could not create output directory: " + getOutdir());
+    if (getDmgIcon() == null) {
+      String resolvedDmgIcon = getMacAppIcon();
+      if (resolvedDmgIcon != null) setDmgIcon(resolvedDmgIcon);
     }
+
 
     // For better documentation of the individual steps, read the descriptions of the methods.
     try {

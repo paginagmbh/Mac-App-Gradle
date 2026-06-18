@@ -1,5 +1,8 @@
 package gmbh.pagina.tools.gradle.mac_app;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -49,6 +52,32 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
                       () ->
                           Integer.parseInt(
                               javaPluginExtension.getTargetCompatibility().getMajorVersion())));
+          task.getVmOptionsProperty()
+              .convention(
+                  project.provider(
+                      () -> {
+                        Iterable<String> defaults = javaApplication.getApplicationDefaultJvmArgs();
+                        if (defaults == null) return java.util.Collections.emptyList();
+
+                        List<String> vmOptions = new ArrayList<>();
+                        for (String arg : defaults) {
+                          if (arg != null && !arg.startsWith("-D")) vmOptions.add(arg);
+                        }
+                        return vmOptions;
+                      }));
+          task.getJavaPropertiesProperty()
+              .convention(
+                  project.provider(
+                      () -> {
+                        Iterable<String> defaults = javaApplication.getApplicationDefaultJvmArgs();
+                        if (defaults == null) return java.util.Collections.emptyList();
+
+                        List<String> properties = new ArrayList<>();
+                        for (String arg : defaults) {
+                          if (arg != null && arg.startsWith("-D")) properties.add(arg);
+                        }
+                        return properties;
+                      }));
           task.getJavaApplicationStubFiles().from(jas);
           task.getMainJarFiles().from(jar.flatMap(Jar::getArchiveFile));
           task.getRuntimeClasspath().from(runtimeClasspath);
