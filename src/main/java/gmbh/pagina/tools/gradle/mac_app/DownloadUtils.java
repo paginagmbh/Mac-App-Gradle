@@ -14,6 +14,7 @@ import org.gradle.api.GradleException;
 /** Shared HTTP-only download helper used by plugin tasks. */
 final class DownloadUtils {
 
+  /** Shared HTTP client with conservative timeouts and redirect handling. */
   private static final HttpClient HTTP_CLIENT =
       HttpClient.newBuilder()
           .connectTimeout(Duration.ofSeconds(15))

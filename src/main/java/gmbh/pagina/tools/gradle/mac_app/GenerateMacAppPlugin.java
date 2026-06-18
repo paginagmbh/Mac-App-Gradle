@@ -14,6 +14,14 @@ import org.gradle.api.tasks.bundling.Jar;
 /** The plugin for generating and signing a mac app. */
 public class GenerateMacAppPlugin implements Plugin<Project> {
 
+  /** Creates the plugin instance. */
+  public GenerateMacAppPlugin() {}
+
+  /**
+   * Applies the plugin and wires all mac app generation/signing tasks.
+   *
+   * @param project The target Gradle project.
+   */
   @Override
   public void apply(Project project) {
     project.getPlugins().apply("application");
@@ -45,7 +53,8 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
         task -> {
           task.getMainClassNameProperty().convention(javaApplication.getMainClass());
           task.getProjectNameProperty().convention(project.provider(project::getName));
-          task.getProjectVersionProperty().convention(project.provider(() -> String.valueOf(project.getVersion())));
+          task.getProjectVersionProperty()
+              .convention(project.provider(() -> String.valueOf(project.getVersion())));
           task.getTargetJavaVersionProperty()
               .convention(
                   project.provider(

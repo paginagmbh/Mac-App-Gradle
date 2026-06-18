@@ -24,6 +24,9 @@ import org.gradle.api.GradleScriptException;
  */
 public class FileUtils {
 
+  /** Utility class; not intended to be instantiated. */
+  private FileUtils() {}
+
   /**
    * Copy an input file to a destination directory, keeping the name.
    *
@@ -102,13 +105,15 @@ public class FileUtils {
     Path outputRoot = unzippedFile.toPath();
     try {
       Files.createDirectories(outputRoot);
-      try (ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile.toPath()))) {
+      try (ZipInputStream zipInputStream =
+          new ZipInputStream(Files.newInputStream(zipFile.toPath()))) {
         ZipEntry entry;
         while ((entry = zipInputStream.getNextEntry()) != null) {
           Path target = outputRoot.resolve(entry.getName()).normalize();
           if (!target.startsWith(outputRoot)) {
             throw new GradleScriptException(
-                "IOException", new IOException("Zip entry escapes target directory: " + entry.getName()));
+                "IOException",
+                new IOException("Zip entry escapes target directory: " + entry.getName()));
           }
           if (entry.isDirectory()) {
             Files.createDirectories(target);
@@ -135,7 +140,8 @@ public class FileUtils {
     try {
       File parent = zipFile.getParentFile();
       if (parent != null) Files.createDirectories(parent.toPath());
-      try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zipFile.toPath()))) {
+      try (ZipOutputStream zipOutputStream =
+          new ZipOutputStream(Files.newOutputStream(zipFile.toPath()))) {
         Path sourceRoot = unzippedFile.getParentFile().toPath();
         if (unzippedFile.isDirectory()) {
           try (java.util.stream.Stream<Path> stream = Files.walk(unzippedFile.toPath())) {
@@ -145,7 +151,10 @@ public class FileUtils {
                     path -> {
                       ZipEntry entry =
                           new ZipEntry(
-                              sourceRoot.relativize(path).toString().replace(File.separatorChar, '/'));
+                              sourceRoot
+                                  .relativize(path)
+                                  .toString()
+                                  .replace(File.separatorChar, '/'));
                       try {
                         zipOutputStream.putNextEntry(entry);
                         Files.copy(path, zipOutputStream);
@@ -208,7 +217,13 @@ public class FileUtils {
      */
   }
 
-  /** Write a string to a text file that does not yet need to exist. */
+  /**
+   * Write a string to a text file that does not yet need to exist.
+   *
+   * @param file Target file.
+   * @param content Text content to write.
+   * @throws IOException If the file cannot be created or written.
+   */
   public static void writeToFile(File file, String content) throws IOException {
     if (!file.exists() && !file.createNewFile()) {
       throw new IOException("Could not create file: " + file.getAbsolutePath());
@@ -218,7 +233,11 @@ public class FileUtils {
     }
   }
 
-  /** Mark a file as executable. Only works on UNIX-like systems! */
+  /**
+   * Mark a file as executable. Only works on UNIX-like systems.
+   *
+   * @param file file to mark executable
+   */
   public static void setExecutable(File file) {
     // try one
     boolean executable = file.setExecutable(true, false);
@@ -240,7 +259,11 @@ public class FileUtils {
     }
   }
 
-  /** Delete a file or directory recursively. */
+  /**
+   * Delete a file or directory recursively.
+   *
+   * @param file file or directory to delete
+   */
   public static void deleteRecursively(File file) {
     if (!file.exists()) return;
     try {
@@ -248,13 +271,15 @@ public class FileUtils {
           file.toPath(),
           new SimpleFileVisitor<>() {
             @Override
-            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+            public FileVisitResult visitFile(Path path, BasicFileAttributes attrs)
+                throws IOException {
               Files.delete(path);
               return FileVisitResult.CONTINUE;
             }
 
             @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc)
+                throws IOException {
               if (exc != null) throw exc;
               Files.delete(dir);
               return FileVisitResult.CONTINUE;

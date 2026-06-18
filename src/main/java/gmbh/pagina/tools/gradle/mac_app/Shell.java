@@ -24,12 +24,20 @@ public class Shell {
     this.exitcode = exitcode;
   }
 
-  /** Has the shell terminated correctly with a normal exit code. */
+  /**
+   * Has the shell terminated correctly with a normal exit code.
+   *
+   * @return {@code true} when the process exit code is zero.
+   */
   public boolean isOk() {
     return exitcode == 0;
   }
 
-  /** Return the output lines of the message */
+  /**
+   * Return the output lines of the message.
+   *
+   * @return output split by line separator.
+   */
   public String[] getLines() {
     return this.out.strip().split(System.lineSeparator());
   }
@@ -41,7 +49,12 @@ public class Shell {
   /** The logger to use for printing to the console. */
   private static final Logger logger = Logging.getLogger(Shell.class);
 
-  /** Test whether a shell command is successful. Long output is truncated. */
+  /**
+   * Test whether a shell command is successful. Long output is truncated.
+   *
+   * @param command Command and arguments.
+   * @return {@code true} when the command exits with code zero.
+   */
   protected static boolean test(String... command) {
     Shell shell = sh(true, true, false, command);
     // If the output is more than two lines truncate it. Otherwise print it in full.
@@ -51,12 +64,22 @@ public class Shell {
     return shell.isOk();
   }
 
-  /** Execute a shell command but don’t throw an error when a bad exit code is encountered. */
+  /**
+   * Execute a shell command but do not throw on a non-zero exit code.
+   *
+   * @param command Command and arguments.
+   * @return Shell result including output and exit code.
+   */
   protected static Shell failOk(String... command) {
     return sh(true, true, true, command);
   }
 
-  /** Execute a shell command. */
+  /**
+   * Execute a shell command.
+   *
+   * @param command Command and arguments.
+   * @return Shell result including output and exit code.
+   */
   protected static Shell sh(String... command) {
     return sh(false, true, true, command);
   }
@@ -113,7 +136,8 @@ public class Shell {
         // Non-zero exit code encountered. Print it in red.
         logger.error("\033[31;1mExit Code: " + exitCode + "\033[0m");
 
-        // This is a specific error encountered when using SSH that will bring the system into a non
+        // This is a specific error encountered when using SSH that will bring the system
+        // into a non
         // usable state. I will help out the user with a specific error message here.
         String errSecMessage =
             (messageBuffer.contains("errSecInternalComponent"))
@@ -123,8 +147,10 @@ public class Shell {
                     + "In your case a reboot will probably be enough. "
                     + "Read the README of the mac app builder repo!"
                 : "";
-        // Throw an error here that stops program execution. If a command is not successful we don’t
-        // want the pipline to continue as if everything is great. Markup the error message with the
+        // Throw an error here that stops program execution. If a command is not successful
+        // we don’t
+        // want the pipline to continue as if everything is great. Markup the error message
+        // with the
         // errSecInternalComponent error message generated above and the exit code.
         throw new GradleException(
             "An error occured executing '"

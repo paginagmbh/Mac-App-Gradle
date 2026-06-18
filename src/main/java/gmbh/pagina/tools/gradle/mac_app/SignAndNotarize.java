@@ -36,6 +36,7 @@ import org.gradle.work.DisableCachingByDefault;
     because = "Signing/notarization depends on external services and keychain state")
 public class SignAndNotarize extends DefaultTask {
 
+  /** Creates the task with default metadata and disables up-to-date checks. */
   public SignAndNotarize() {
     setDescription("Sign and notarize the mac .app bundle.");
     setGroup("Make Mac App");
@@ -102,11 +103,21 @@ public class SignAndNotarize extends DefaultTask {
   /** The directory that is used for outputting the file (customizable, auto). */
   private final DirectoryProperty outdir = getProject().getObjects().directoryProperty();
 
+  /** App bundle name used for output names; can be inferred from existing input bundle. */
   private final Property<String> appName = getProject().getObjects().property(String.class);
+
+  /** Directory containing the unsigned app bundle when signing build output directly. */
   private final DirectoryProperty unsignedMacAppDirectory =
       getProject().getObjects().directoryProperty();
-  private final DirectoryProperty existingMacAppBundle = getProject().getObjects().directoryProperty();
+
+  /** Optional existing .app bundle to sign instead of resolving from unsigned output directory. */
+  private final DirectoryProperty existingMacAppBundle =
+      getProject().getObjects().directoryProperty();
+
+  /** Optional icon path used for signing/notarization metadata and downstream tasks. */
   private final Property<String> macAppIcon = getProject().getObjects().property(String.class);
+
+  /** Project version used in generated DMG naming. */
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
 
   {
@@ -115,117 +126,227 @@ public class SignAndNotarize extends DefaultTask {
     certificatePassword.convention(loadCertificatePasswordFromEnv());
     appleSignID.convention(getProject().getProviders().environmentVariable("APPLE_SIGN_ID"));
     appleIDUser.convention(getProject().getProviders().environmentVariable("APPLE_ID_USER"));
-    appleIDPassword.convention(getProject().getProviders().environmentVariable("APPLE_ID_PASSWORD"));
+    appleIDPassword.convention(
+        getProject().getProviders().environmentVariable("APPLE_ID_PASSWORD"));
     appleIDTeamID.convention(getProject().getProviders().environmentVariable("APPLE_ID_TEAM_ID"));
     outdir.convention(getProject().getLayout().getBuildDirectory().dir("signedMacApp"));
   }
 
+  /**
+   * Gets the keychain name used for signing operations.
+   *
+   * @return keychain name
+   */
   @Input
   public String getKeychainName() {
     return keychainName.get();
   }
 
+  /**
+   * Sets the keychain name used for signing operations.
+   *
+   * @param keychainName keychain name
+   */
   public void setKeychainName(String keychainName) {
     this.keychainName.set(keychainName);
   }
 
+  /**
+   * Gets the keychain password.
+   *
+   * @return keychain password
+   */
   @Input
   public String getKeychainPassword() {
     return keychainPassword.get();
   }
 
+  /**
+   * Sets the keychain password.
+   *
+   * @param keychainPassword keychain password
+   */
   public void setKeychainPassword(String keychainPassword) {
     this.keychainPassword.set(keychainPassword);
   }
 
+  /**
+   * Gets the path to the signing certificate.
+   *
+   * @return certificate path, or null when unset
+   */
   @Input
   @Optional
   public String getCertificate() {
     return certificate.getOrNull();
   }
 
+  /**
+   * Sets the path to the signing certificate.
+   *
+   * @param certificate certificate path
+   */
   public void setCertificate(String certificate) {
     this.certificate.set(certificate);
   }
 
+  /**
+   * Gets the certificate password.
+   *
+   * @return certificate password, or null when unset
+   */
   @Input
   @Optional
   public String getCertificatePassword() {
     return certificatePassword.getOrNull();
   }
 
+  /**
+   * Sets the certificate password.
+   *
+   * @param certificatePassword certificate password
+   */
   public void setCertificatePassword(String certificatePassword) {
     this.certificatePassword.set(certificatePassword);
   }
 
+  /**
+   * Gets the Apple signing identity.
+   *
+   * @return Apple signing identity, or null when unset
+   */
   @Input
   @Optional
   public String getAppleSignID() {
     return appleSignID.getOrNull();
   }
 
+  /**
+   * Sets the Apple signing identity.
+   *
+   * @param appleSignID Apple signing identity
+   */
   public void setAppleSignID(String appleSignID) {
     this.appleSignID.set(appleSignID);
   }
 
+  /**
+   * Gets the Apple ID user account.
+   *
+   * @return Apple ID user, or null when unset
+   */
   @Input
   @Optional
   public String getAppleIDUser() {
     return appleIDUser.getOrNull();
   }
 
+  /**
+   * Sets the Apple ID user account.
+   *
+   * @param appleIDUser Apple ID user
+   */
   public void setAppleIDUser(String appleIDUser) {
     this.appleIDUser.set(appleIDUser);
   }
 
+  /**
+   * Gets the Apple ID password.
+   *
+   * @return Apple ID password, or null when unset
+   */
   @Input
   @Optional
   public String getAppleIDPassword() {
     return appleIDPassword.getOrNull();
   }
 
+  /**
+   * Sets the Apple ID password.
+   *
+   * @param appleIDPassword Apple ID password
+   */
   public void setAppleIDPassword(String appleIDPassword) {
     this.appleIDPassword.set(appleIDPassword);
   }
 
+  /**
+   * Gets the Apple team ID used for notarization.
+   *
+   * @return Apple team ID, or null when unset
+   */
   @Input
   @Optional
   public String getAppleIDTeamID() {
     return appleIDTeamID.getOrNull();
   }
 
+  /**
+   * Sets the Apple team ID used for notarization.
+   *
+   * @param appleIDTeamID Apple team ID
+   */
   public void setAppleIDTeamID(String appleIDTeamID) {
     this.appleIDTeamID.set(appleIDTeamID);
   }
 
+  /**
+   * Gets the output directory used for signed artifacts.
+   *
+   * @return output directory
+   */
   @Internal
   public File getOutdir() {
     return outdir.get().getAsFile();
   }
 
+  /**
+   * Sets the output directory path.
+   *
+   * @param outdir output directory path
+   */
   public void setOutdir(String outdir) {
     this.outdir.fileValue(new File(outdir));
   }
 
+  /**
+   * Sets the output directory.
+   *
+   * @param outdir output directory
+   */
   public void setOutdir(File outdir) {
     this.outdir.fileValue(outdir);
   }
 
+  /**
+   * Gets the app name used for output artifacts.
+   *
+   * @return app name
+   */
   @Input
   public String getAppName() {
     if (appName.isPresent()) return appName.get();
     return getInputAppBundleName();
   }
 
-
+  /**
+   * Returns the unsigned app directory property.
+   *
+   * @return unsigned app directory property
+   */
   @Internal
   public DirectoryProperty getUnsignedMacAppDirectoryProperty() {
     return unsignedMacAppDirectory;
   }
 
-  /** Determine the bundle name from the configured input app path. */
+  /**
+   * Determines the bundle name from the configured input app path.
+   *
+   * @return app bundle name without .app suffix
+   */
   private String getInputAppBundleName() {
-    File inputApp = existingMacAppBundle.isPresent() ? existingMacAppBundle.get().getAsFile() : null;
+    File inputApp =
+        existingMacAppBundle.isPresent() ? existingMacAppBundle.get().getAsFile() : null;
     if (inputApp == null) {
       if (!unsignedMacAppDirectory.isPresent()) {
         throw new InvalidUserDataException(
@@ -238,7 +359,11 @@ public class SignAndNotarize extends DefaultTask {
     return name;
   }
 
-  /** Derive the unsigned bundle name from the task state when appName is not configured. */
+  /**
+   * Derives the unsigned bundle name when <code>appName</code> is not configured.
+   *
+   * @return configured app name
+   */
   private String getAppNameFromUnsignedBundleFallback() {
     if (appName.isPresent()) return appName.get();
     throw new InvalidUserDataException(
@@ -246,10 +371,9 @@ public class SignAndNotarize extends DefaultTask {
   }
 
   /**
-   * Optional path to an existing .app bundle to sign/notarize directly.
+   * Gets the configured existing input app bundle.
    *
-   * <p>If this is set, the task uses this bundle as input instead of resolving
-   * {@code unsignedMacAppDirectory/appName.app}.
+   * @return existing input app bundle, or null when unset
    */
   @InputDirectory
   @Optional
@@ -258,71 +382,138 @@ public class SignAndNotarize extends DefaultTask {
     return existingMacAppBundle.isPresent() ? existingMacAppBundle.get().getAsFile() : null;
   }
 
+  /**
+   * Sets an existing input app bundle path.
+   *
+   * @param existingMacAppBundle path to existing app bundle
+   */
   public void setExistingMacAppBundle(String existingMacAppBundle) {
     this.existingMacAppBundle.fileValue(new File(existingMacAppBundle));
   }
 
+  /**
+   * Sets an existing input app bundle.
+   *
+   * @param existingMacAppBundle existing app bundle
+   */
   public void setExistingMacAppBundle(File existingMacAppBundle) {
     this.existingMacAppBundle.fileValue(existingMacAppBundle);
   }
 
+  /**
+   * Returns the existing app bundle property.
+   *
+   * @return existing app bundle property
+   */
   @Internal
   public DirectoryProperty getExistingMacAppBundleProperty() {
     return existingMacAppBundle;
   }
 
+  /**
+   * Gets the configured mac app icon path.
+   *
+   * @return icon path, or null when unset
+   */
   @Input
   @Optional
   public String getMacAppIcon() {
     return macAppIcon.getOrNull();
   }
 
+  /**
+   * Sets the configured mac app icon path.
+   *
+   * @param macAppIcon icon path
+   */
   public void setMacAppIcon(String macAppIcon) {
     this.macAppIcon.set(macAppIcon);
   }
 
+  /**
+   * Gets the project version.
+   *
+   * @return project version
+   */
   @Input
   public String getProjectVersion() {
     return projectVersion.get();
   }
 
+  /**
+   * Sets the project version.
+   *
+   * @param projectVersion project version
+   */
   public void setProjectVersion(String projectVersion) {
     this.projectVersion.set(projectVersion);
   }
 
+  /**
+   * Returns the app name property.
+   *
+   * @return app name property
+   */
   @Internal
   public Property<String> getAppNameProperty() {
     return appName;
   }
 
+  /**
+   * Returns the mac app icon property.
+   *
+   * @return mac app icon property
+   */
   @Internal
   public Property<String> getMacAppIconProperty() {
     return macAppIcon;
   }
 
+  /**
+   * Returns the project version property.
+   *
+   * @return project version property
+   */
   @Internal
   public Property<String> getProjectVersionProperty() {
     return projectVersion;
   }
 
+  /**
+   * Returns the output directory property.
+   *
+   * @return output directory property
+   */
   @Internal
   public DirectoryProperty getOutdirProperty() {
     return outdir;
   }
 
-  /** The signed mac app bundle. */
+  /**
+   * Returns the signed and notarized app bundle directory.
+   *
+   * @return signed app directory
+   */
   @OutputDirectory
   public File getSignedAndNotarizedMacApp() {
     return new File(getOutdir(), getAppName() + ".app");
   }
 
-  /** The notarized installation disk image. */
+  /**
+   * Returns the notarized DMG output file.
+   *
+   * @return notarized DMG file
+   */
   @OutputFile
   public File getNotarizedDMG() {
     return new File(getOutdir(), getAppName() + ".dmg");
   }
 
-  /** A tar.gz file containing the signed app. */
+  /**
+   * Gets the signed app tar.gz archive path.
+   *
+   * @return signed app archive file
+   */
   @Internal
   public File getSignedAndNotarizedMacAppTarGz() {
     return new File(getOutdir(), getAppName() + ".tgz");
@@ -384,7 +575,8 @@ public class SignAndNotarize extends DefaultTask {
 
     String data;
     if ((data = System.getenv("APPLE_SIGNING_PASSWORD_BASE64")) != null) {
-      // Strip is important here since I encountered an issue, where there was a trailing newline or
+      // Strip is important here since I encountered an issue, where there was a trailing
+      // newline or
       // space which broke the entire thing.
       return new String(Base64.getDecoder().decode(data)).strip();
     }
@@ -517,7 +709,11 @@ public class SignAndNotarize extends DefaultTask {
     Shell.sh("security", "unlock-keychain", "-p", getKeychainPassword(), getKeychainName());
   }
 
-  /** Import root certificates required for signing: https://stackoverflow.com/questions/69464483 */
+  /**
+   * Imports root certificates required for signing.
+   *
+   * <p>Reference: <a href="https://stackoverflow.com/questions/69464483">Stack Overflow discussion</a>
+   */
   private void importRootCertificates() {
     headline("Importing root certificates");
     importCA(
@@ -589,8 +785,7 @@ public class SignAndNotarize extends DefaultTask {
       throw new InvalidUserDataException("Could not find input app bundle: " + inputApp);
     }
     if (!inputApp.getName().endsWith(".app")) {
-      throw new InvalidUserDataException(
-          "Input app bundle must have the .app suffix: " + inputApp);
+      throw new InvalidUserDataException("Input app bundle must have the .app suffix: " + inputApp);
     }
     try {
       FileUtils.copyDir(inputApp, getSignedAndNotarizedMacApp());
@@ -616,7 +811,8 @@ public class SignAndNotarize extends DefaultTask {
         getAppleSignID(),
         signPath);
 
-    // Evaluate the result. These can throw errors if something went wrong – and abort the process.
+    // Evaluate the result. These can throw errors if something went wrong – and abort the
+    // process.
     if (verify) {
       Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", signPath);
       Shell.sh("spctl", "-a", "-t", "exec", "-vv", signPath);
@@ -729,7 +925,8 @@ public class SignAndNotarize extends DefaultTask {
    */
   private void cleanup() {
     headline("Cleanup");
-    // Delete the certificate from the keychain. The keychain potentially is the login keychain. The
+    // Delete the certificate from the keychain. The keychain potentially is the login keychain.
+    // The
     // certificate must not remain there!
     Shell.failOk("security", "delete-certificate", "-c", getAppleSignID());
 
@@ -755,13 +952,15 @@ public class SignAndNotarize extends DefaultTask {
       return;
     }
 
-    // Create the outdir first. For base64 certificate input we write a temp .p12 into this folder.
+    // Create the outdir first. For base64 certificate input we write a temp .p12 into this
+    // folder.
     if (getOutdir().exists()) FileUtils.deleteRecursively(getOutdir());
     if (!getOutdir().mkdirs()) {
       throw new IllegalStateException("Could not create output directory: " + getOutdir());
     }
 
-    // Make sure, that all variables are set. Set them now from runtime properties or environment.
+    // Make sure, that all variables are set. Set them now from runtime properties or
+    // environment.
     if (getCertificate() == null) {
       String resolvedCertificate = getCertificateFilePath();
       if (resolvedCertificate != null) setCertificate(resolvedCertificate);
@@ -776,7 +975,6 @@ public class SignAndNotarize extends DefaultTask {
       throw new InvalidUserDataException("Required property 'appleIDPassword' not set.");
     if (getAppleIDTeamID() == null)
       throw new InvalidUserDataException("Required property 'appleIDTeamID' not set.");
-
 
     // For better documentation of the individual steps, read the descriptions of the methods.
     try {

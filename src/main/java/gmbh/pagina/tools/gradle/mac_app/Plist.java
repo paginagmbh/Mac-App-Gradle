@@ -48,6 +48,8 @@ public class Plist {
    * Save the property list to a target file.
    *
    * @param file The file to write it to.
+   * @throws ParserConfigurationException If XML transformer setup fails.
+   * @throws TransformerException If writing the XML document fails.
    */
   public void save(File file) throws ParserConfigurationException, TransformerException {
     Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -57,38 +59,73 @@ public class Plist {
     transformer.transform(new DOMSource(doc), new StreamResult(file));
   }
 
-  /** Add a <code>&lt;string&gt;</code> node to a parent element. */
+  /**
+   * Add a <code>&lt;string&gt;</code> node to a parent element.
+   *
+   * @param parent The parent XML node to append to.
+   * @param value The string value to store.
+   */
   public void addString(Node parent, String value) {
     parent.appendChild(textNode("string", value));
   }
 
-  /** Add a <code>&lt;key&gt;</code> node to a parent element. */
+  /**
+   * Add a <code>&lt;key&gt;</code> node to a parent element.
+   *
+   * @param parent The parent XML node to append to.
+   * @param value The key value to store.
+   */
   public void addKey(Node parent, String value) {
     parent.appendChild(textNode("key", value));
   }
 
-  /** Add a <code>&lt;string&gt;</code> node to the root dictionary. */
+  /**
+   * Add a <code>&lt;string&gt;</code> node to the root dictionary.
+   *
+   * @param value The string value to store.
+   */
   public void addString(String value) {
     addString(root, value);
   }
 
-  /** Add a <code>&lt;key&gt;</code> node to the root dictionary. */
+  /**
+   * Add a <code>&lt;key&gt;</code> node to the root dictionary.
+   *
+   * @param value The key value to store.
+   */
   public void addKey(String value) {
     addKey(root, value);
   }
 
-  /** Create an entry with a key and a boolean value in a parent node. */
+  /**
+   * Create an entry with a key and a boolean value in a parent node.
+   *
+   * @param parent The parent XML node.
+   * @param key The plist key.
+   * @param value The boolean value.
+   */
   public void createEntry(Node parent, String key, boolean value) {
     addKey(parent, key);
     parent.appendChild(booleanNode(value));
   }
 
-  /** Create an entry with a key and a boolean value in the root property list. */
+  /**
+   * Create an entry with a key and a boolean value in the root property list.
+   *
+   * @param key The plist key.
+   * @param value The boolean value.
+   */
   public void createEntry(String key, boolean value) {
     createEntry(root, key, value);
   }
 
-  /** Create an entry with a key and a string value in a parent node. */
+  /**
+   * Create an entry with a key and a string value in a parent node.
+   *
+   * @param parent The parent XML node.
+   * @param key The plist key.
+   * @param value The string value.
+   */
   public void createEntry(Node parent, String key, String value) {
     if (value == null) {
       System.out.println("Warning: key '" + key + "' has a value of null, skipping entry.");
@@ -98,7 +135,12 @@ public class Plist {
     }
   }
 
-  /** Create an entry with a key and a string value in the root property list. */
+  /**
+   * Create an entry with a key and a string value in the root property list.
+   *
+   * @param key The plist key.
+   * @param value The string value.
+   */
   public void createEntry(String key, String value) {
     createEntry(root, key, value);
   }
@@ -154,6 +196,11 @@ public class Plist {
    *
    * @param mainClass The main class in the format <em>com.package.Class</em>
    * @param minimumVersion The minimum version of Java required.
+   * @param properties Java system properties in <code>-Dkey=value</code> form.
+   * @param vmOptions JVM options passed to the launcher.
+   * @param startOnMainThread Whether to launch on the macOS main thread.
+   * @param mainArguments Arguments passed to the Java main class.
+   * @param splashFile Optional splash file name.
    */
   public void javaX(
       String mainClass,
@@ -172,7 +219,8 @@ public class Plist {
     createEntry(javaX, "SplashFile", splashFile);
     if (startOnMainThread != null) createEntry(javaX, "StartOnMainThread", startOnMainThread);
 
-    // Add the elements from the classpath to an array. Assume the live in the java root directory.
+    // Add the elements from the classpath to an array. Assume the live in the java root
+    // directory.
     javaX.appendChild(textNode("key", "ClassPath"));
     Element classPath = doc.createElement("array");
     addString(classPath, "$JAVAROOT/*");
@@ -185,7 +233,12 @@ public class Plist {
     root.appendChild(javaX);
   }
 
-  /** Set up document types the document can read/edit. */
+  /**
+   * Set up document types the document can read/edit.
+   *
+   * @param documentTypes Document type definitions to write into <code>CFBundleDocumentTypes</code>
+   *     .
+   */
   public void documentTypes(DocumentType[] documentTypes) {
     // Add the root array element and corresponding key
     addKey("CFBundleDocumentTypes");
