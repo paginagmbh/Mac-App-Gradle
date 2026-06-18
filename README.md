@@ -4,16 +4,6 @@ A Gradle plugin that creates and signs Mac apps.
 Must be run on a Mac.
 An unsigned Mac app can also be built on Linux/WSL.
 
-This task can be run locally, but it is primarily intended for CI use.
-For this it will install some requirements as follows:
-
-* It requires [electron-installer-dmg](https://github.com/electron-userland/electron-installer-dmg) for creating a DMG file which can be notarized.
-* If it does not exist it will install it using npm.
-* If npm is not installed, it will install it using brew.
-* If brew is not installed, an error will be thrown.
-* It downloads the configured *javaApplicationStub* from GitHub using curl.
-  If curl is not available, an error is thrown.
-
 
 ## Usage
 
@@ -379,11 +369,6 @@ If not provided as a Groovy argument, it is read from the *$APPLE_ID_TEAM_ID* en
 Example: *"ASDF213FDSA"*
 
 
-**dmgIcon** (Optional, default: the same file as the macOS app icon)
-
-Icon used for the *.dmg* file.
-
-
 **outdir** (Optional, default: `"${buildDir}/signedMacApp"`)
 
 
@@ -493,6 +478,7 @@ public static final String name = meta.getString("name");
 * `javaApplicationStub` task is now cacheable to improve repeated build performance.
 * Use of [NativeJavaApplicationStub](https://github.com/paginagmbh/NativeJavaApplicationStub) as default source.
 * Added JavaX-related `macApp` properties: `javaProperties`, `vmOptions`, `startOnMainThread`, `mainArguments`, and `splashFile`. `vmOptions`/`javaProperties` now default from `application.applicationDefaultJvmArgs`.
+* No longer requires curl/brew/node/electron-installer-dmg as dependencies.
 
 
 ### 1.x.x

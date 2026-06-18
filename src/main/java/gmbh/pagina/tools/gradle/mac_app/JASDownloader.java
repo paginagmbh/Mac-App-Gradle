@@ -1,12 +1,6 @@
 package gmbh.pagina.tools.gradle.mac_app;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.DirectoryProperty;
@@ -165,18 +159,7 @@ public class JASDownloader extends DefaultTask {
   /** Download the zip or shell file. */
   private void download() {
     File destination = isUnzip() ? getZipFile() : getTargetFile();
-    File parent = destination.getParentFile();
-    try {
-      if (parent != null) Files.createDirectories(parent.toPath());
-      URLConnection connection = new URL(getSourceUrl().get()).openConnection();
-      connection.setConnectTimeout(30_000);
-      connection.setReadTimeout(60_000);
-      try (InputStream inputStream = connection.getInputStream()) {
-        Files.copy(inputStream, destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException("Could not download Java application stub", e);
-    }
+    DownloadUtils.downloadHttpToFile(getSourceUrl().get(), destination.toPath(), "Java application stub");
   }
 
   /** Unzip the zip file. */

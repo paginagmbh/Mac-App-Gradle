@@ -48,7 +48,8 @@ public class SignAndNotarize extends DefaultTask {
   private final Property<String> keychainName = getProject().getObjects().property(String.class);
 
   /** The password for the keychain. Has to be the user password if the login keychain is used. */
-  private final Property<String> keychainPassword = getProject().getObjects().property(String.class);
+  private final Property<String> keychainPassword =
+      getProject().getObjects().property(String.class);
 
   /**
    * The path to the signing certificate (customizable, auto). Defaults to one read from environment
@@ -66,7 +67,8 @@ public class SignAndNotarize extends DefaultTask {
    * variables. Either directly from <em>$APPLE_SIGNING_PASSWORD</em> or using a (not) “secure” base
    * 64 encoded variable <em>$APPLE_SIGNING_PASSWORD_BASE64</em>.
    */
-  private final Property<String> certificatePassword = getProject().getObjects().property(String.class);
+  private final Property<String> certificatePassword =
+      getProject().getObjects().property(String.class);
 
   /**
    * The AppleID used for code signing (customizable, auto). Defaults to one found in an environment
@@ -94,13 +96,12 @@ public class SignAndNotarize extends DefaultTask {
    */
   private final Property<String> appleIDTeamID = getProject().getObjects().property(String.class);
 
-  /** The icon used for the disk image (customizable, auto). Defaults to the app icon. */
-  private final Property<String> dmgIcon = getProject().getObjects().property(String.class);
-
   /** The directory that is used for outputting the file (customizable, auto). */
   private final DirectoryProperty outdir = getProject().getObjects().directoryProperty();
+
   private final Property<String> appName = getProject().getObjects().property(String.class);
-  private final DirectoryProperty unsignedMacAppDirectory = getProject().getObjects().directoryProperty();
+  private final DirectoryProperty unsignedMacAppDirectory =
+      getProject().getObjects().directoryProperty();
   private final Property<String> macAppIcon = getProject().getObjects().property(String.class);
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
 
@@ -191,16 +192,6 @@ public class SignAndNotarize extends DefaultTask {
 
   public void setAppleIDTeamID(String appleIDTeamID) {
     this.appleIDTeamID.set(appleIDTeamID);
-  }
-
-  @Input
-  @Optional
-  public String getDmgIcon() {
-    return dmgIcon.getOrNull();
-  }
-
-  public void setDmgIcon(String dmgIcon) {
-    this.dmgIcon.set(dmgIcon);
   }
 
   @Internal
@@ -429,11 +420,8 @@ public class SignAndNotarize extends DefaultTask {
       throw new IllegalStateException("Could not delete temporary certificate: " + out);
     }
 
-    // Escape spaces
-    String cer = out.getAbsolutePath().replace(" ", "\\ ");
-
-    // Download the certificate
-    Shell.sh("curl", "-s", "-o", cer, url);
+    String cer = out.getAbsolutePath();
+    DownloadUtils.downloadHttpToFile(url, out.toPath(), "certificate");
     // Import it into our keychain
     Shell.sh("security", "import", cer, "-t", "cert", "-k", getKeychainName(), "-A");
     // Import it into the login keychain
@@ -442,35 +430,6 @@ public class SignAndNotarize extends DefaultTask {
     // clean up the certificate. No need to have it laying about.
     if (out.exists() && !out.delete()) {
       throw new IllegalStateException("Could not delete temporary certificate: " + out);
-    }
-  }
-
-  /**
-   * Ensure that brew is installed. If it is not, the user will be instructed to install it and this
-   * method will throw an error.
-   */
-  private void ensureBrew() {
-    if (!Shell.test("which", "brew")) {
-      throw new InvalidUserDataException(
-          "brew is not installed but required. Please visit https://brew.sh/");
-    }
-  }
-
-  /** Ensure that NPM is installed. If it is not installed, it is installed with brew. */
-  private void ensureNPM() {
-    if (!Shell.test("which", "npm")) {
-      ensureBrew();
-      subHeadline("Installing NPM");
-      Shell.sh("brew", "install", "node");
-    }
-  }
-
-  /** Ensure that electron-installer-dmg is installed. If not, it will be installed with npm. */
-  private void ensureElectronInstallerDMG() {
-    if (!Shell.test("which", "electron-installer-dmg")) {
-      ensureNPM();
-      subHeadline("Installing electron-installer-dmg");
-      Shell.sh("npm", "install", "-g", "electron-installer-dmg");
     }
   }
 
@@ -633,46 +592,24 @@ public class SignAndNotarize extends DefaultTask {
     codesign(appDir, true);
   }
 
-  /** Create a DiskImage that can be notarized. */
+  /** Create a simple DiskImage that can be notarized. */
   private void createDmg() {
     headline("Create DMG");
-    // Install the required tools, if they are not already installed.
-    ensureElectronInstallerDMG();
-    String titleCandidate = getAppName() + ' ' + getProjectVersion();
-    if (titleCandidate.length() > 27 && titleCandidate.contains("-SNAPSHOT"))
-      titleCandidate = titleCandidate.replace("-SNAPSHOT", "β");
-    if (titleCandidate.length() > 26) {
-      // Worried about unicode here so one character of margin
-      titleCandidate = titleCandidate.substring(0, 26);
-    }
-    // Different calls with or without icon.
-    if (getDmgIcon() == null)
-      Shell.sh(
-          "electron-installer-dmg",
-          "--title",
-          titleCandidate,
-          "--out",
-          getOutdir().getAbsolutePath(),
-          "--overwrite",
-          getSignedAndNotarizedMacApp().getAbsolutePath(),
-          getAppName());
-    else
-      Shell.sh(
-          "electron-installer-dmg",
-          "--title",
-          titleCandidate,
-          "--out",
-          getOutdir().getAbsolutePath(),
-          "--icon",
-          getDmgIcon(),
-          "--overwrite",
-          getSignedAndNotarizedMacApp().getAbsolutePath(),
-          getAppName());
-    // // Option for a custom background picture:
-    // # --background=src/build/splashscreen/DmgBackground.png \
-    // // Create a DMG without the electron tool. Would have to do the icon and background myself
-    // # hdiutil create -volname "${APP_NAME}" -srcfolder "${APP_PATH}" "${DMG_PATH}"
-    //
+    String appPath = getSignedAndNotarizedMacApp().getAbsolutePath();
+    String dmgPath = getNotarizedDMG().getAbsolutePath();
+    String volumeName = getAppName() + ' ' + getProjectVersion();
+
+    Shell.sh(
+        "hdiutil",
+        "create",
+        "-volname",
+        volumeName,
+        "-srcfolder",
+        appPath,
+        "-ov",
+        "-format",
+        "UDZO",
+        dmgPath);
   }
 
   /** Codesign the DiskImage. */
@@ -680,7 +617,14 @@ public class SignAndNotarize extends DefaultTask {
     headline("Code-Signing DMG");
     String dmgPath = getNotarizedDMG().getAbsolutePath();
     Shell.sh(
-        "codesign", "--force", "--verbose", "--options", "runtime", "--sign", getAppleSignID(), dmgPath);
+        "codesign",
+        "--force",
+        "--verbose",
+        "--options",
+        "runtime",
+        "--sign",
+        getAppleSignID(),
+        dmgPath);
     // Confirm that this worked. Throw an error otherwise.
     Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", dmgPath);
   }
@@ -768,11 +712,6 @@ public class SignAndNotarize extends DefaultTask {
       throw new InvalidUserDataException("Required property 'certificatePassword' not set.");
     if (getAppleSignID() == null)
       throw new InvalidUserDataException("Required property 'appleSignID' not set.");
-
-    if (getDmgIcon() == null) {
-      String resolvedDmgIcon = getMacAppIcon();
-      if (resolvedDmgIcon != null) setDmgIcon(resolvedDmgIcon);
-    }
 
 
     // For better documentation of the individual steps, read the descriptions of the methods.
