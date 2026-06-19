@@ -16,6 +16,7 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
@@ -93,6 +94,14 @@ public class AppBundler extends DefaultTask {
   /** JavaX main class arguments. */
   private final ListProperty<String> mainArguments =
       getProject().getObjects().listProperty(String.class);
+
+  /** Additional top-level Info.plist entries to merge after generated defaults. */
+  private final MapProperty<String, Object> additionalPlistEntries =
+      getProject().getObjects().mapProperty(String.class, Object.class);
+
+  /** Additional JavaX dictionary entries to merge after generated JavaX defaults. */
+  private final MapProperty<String, Object> additionalJavaXEntries =
+      getProject().getObjects().mapProperty(String.class, Object.class);
 
   /** Whether JavaX should launch on the macOS main thread. */
   private final Property<Boolean> startOnMainThread =
@@ -413,6 +422,54 @@ public class AppBundler extends DefaultTask {
   }
 
   /**
+   * Gets additional top-level Info.plist entries.
+   *
+   * @return additional plist entries, or null when unset
+   */
+  @Input
+  @Optional
+  public java.util.Map<String, Object> getAdditionalPlistEntries() {
+    return additionalPlistEntries.getOrNull();
+  }
+
+  /**
+   * Sets additional top-level Info.plist entries.
+   *
+   * @param additionalPlistEntries additional plist entries
+   */
+  public void setAdditionalPlistEntries(java.util.Map<String, ?> additionalPlistEntries) {
+    if (additionalPlistEntries == null) {
+      this.additionalPlistEntries.set(java.util.Collections.emptyMap());
+    } else {
+      this.additionalPlistEntries.set(new java.util.LinkedHashMap<>(additionalPlistEntries));
+    }
+  }
+
+  /**
+   * Gets additional JavaX dictionary entries.
+   *
+   * @return additional JavaX entries, or null when unset
+   */
+  @Input
+  @Optional
+  public java.util.Map<String, Object> getAdditionalJavaXEntries() {
+    return additionalJavaXEntries.getOrNull();
+  }
+
+  /**
+   * Sets additional JavaX dictionary entries.
+   *
+   * @param additionalJavaXEntries additional JavaX entries
+   */
+  public void setAdditionalJavaXEntries(java.util.Map<String, ?> additionalJavaXEntries) {
+    if (additionalJavaXEntries == null) {
+      this.additionalJavaXEntries.set(java.util.Collections.emptyMap());
+    } else {
+      this.additionalJavaXEntries.set(new java.util.LinkedHashMap<>(additionalJavaXEntries));
+    }
+  }
+
+  /**
    * Gets the main-thread startup flag.
    *
    * @return true/false value, or null when unset
@@ -660,6 +717,26 @@ public class AppBundler extends DefaultTask {
   }
 
   /**
+   * Returns the additional top-level plist entries map property.
+   *
+   * @return additional plist entries map property
+   */
+  @Internal
+  public MapProperty<String, Object> getAdditionalPlistEntriesProperty() {
+    return additionalPlistEntries;
+  }
+
+  /**
+   * Returns the additional JavaX entries map property.
+   *
+   * @return additional JavaX entries map property
+   */
+  @Internal
+  public MapProperty<String, Object> getAdditionalJavaXEntriesProperty() {
+    return additionalJavaXEntries;
+  }
+
+  /**
    * Returns the main-thread startup property.
    *
    * @return main-thread startup property
@@ -752,6 +829,8 @@ public class AppBundler extends DefaultTask {
     outdir.convention(getProject().getLayout().getBuildDirectory().dir("unsignedMacApp"));
     pkgInfoSignature.convention(appName.map(this::computePkgInfoSignature));
     bundleIdentifier.convention(mainClassName.map(this::computeBundleIdentifier));
+    additionalPlistEntries.convention(java.util.Collections.emptyMap());
+    additionalJavaXEntries.convention(java.util.Collections.emptyMap());
   }
 
   /**
@@ -828,7 +907,9 @@ public class AppBundler extends DefaultTask {
   /**
    * Compute a code to use for the app PkgInfo signature.
    *
-   * <p>Reference: <a href="https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPRuntimeConfig/Articles/ConfigApplications.html">Apple Runtime Configuration documentation</a>
+   * <p>Reference: <a
+   * href="https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPRuntimeConfig/Articles/ConfigApplications.html">Apple
+   * Runtime Configuration documentation</a>
    *
    * @param name The app name to process.
    * @return An exactly four digit code that is stable with respect to the passed name.
@@ -1001,7 +1082,9 @@ public class AppBundler extends DefaultTask {
         getVmOptions(),
         getStartOnMainThread(),
         getMainArguments(),
-        splashFileName);
+        splashFileName,
+        getAdditionalJavaXEntries());
+    infoPlist.createEntries(getAdditionalPlistEntries());
     // Save the Info.plist object.
     try {
       infoPlist.save(new File(contents, "Info.plist"));

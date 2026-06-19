@@ -105,8 +105,7 @@ public class Plist {
    * @param value The boolean value.
    */
   public void createEntry(Node parent, String key, boolean value) {
-    addKey(parent, key);
-    parent.appendChild(booleanNode(value));
+    createEntry(parent, key, Boolean.valueOf(value));
   }
 
   /**
@@ -127,12 +126,36 @@ public class Plist {
    * @param value The string value.
    */
   public void createEntry(Node parent, String key, String value) {
+    createEntry(parent, key, (Object) value);
+  }
+
+  /**
+   * Create or replace an entry with a key and a plist-compatible value in a parent dictionary.
+   *
+   * @param parent The parent XML dictionary node.
+   * @param key The plist key.
+   * @param value The plist-compatible value.
+   */
+  public void createEntry(Node parent, String key, Object value) {
     if (value == null) {
       System.out.println("Warning: key '" + key + "' has a value of null, skipping entry.");
-    } else {
-      addKey(parent, key);
-      addString(parent, value);
+      return;
     }
+
+    Node valueNode = valueNode(value);
+    if (valueNode == null) {
+      System.out.println(
+          "Warning: key '"
+              + key
+              + "' has an unsupported value type '"
+              + value.getClass().getName()
+              + "', skipping entry.");
+      return;
+    }
+
+    removeEntry(parent, key);
+    addKey(parent, key);
+    parent.appendChild(valueNode);
   }
 
   /**
@@ -145,6 +168,39 @@ public class Plist {
     createEntry(root, key, value);
   }
 
+  /**
+   * Create or replace an entry with a key and a plist-compatible value in the root dictionary.
+   *
+   * @param key The plist key.
+   * @param value The plist-compatible value.
+   */
+  public void createEntry(String key, Object value) {
+    createEntry(root, key, value);
+  }
+
+  /**
+   * Create or replace multiple entries in a parent dictionary.
+   *
+   * @param parent The parent XML dictionary node.
+   * @param entries Key/value entries to apply.
+   */
+  public void createEntries(Node parent, java.util.Map<String, ?> entries) {
+    if (entries == null || entries.isEmpty()) return;
+    for (java.util.Map.Entry<String, ?> entry : entries.entrySet()) {
+      if (entry.getKey() == null || entry.getKey().isEmpty()) continue;
+      createEntry(parent, entry.getKey(), entry.getValue());
+    }
+  }
+
+  /**
+   * Create or replace multiple entries in the root dictionary.
+   *
+   * @param entries Key/value entries to apply.
+   */
+  public void createEntries(java.util.Map<String, ?> entries) {
+    createEntries(root, entries);
+  }
+
   /** Create a node with an element name and a string value and return it. */
   private Node textNode(String key, String value) {
     Element node = doc.createElement(key);
@@ -155,6 +211,83 @@ public class Plist {
   /** Create a boolean node (true or false) and return it. */
   private Node booleanNode(boolean value) {
     return doc.createElement(Boolean.toString(value));
+  }
+
+  /** Create an integer node and return it. */
+  private Node integerNode(long value) {
+    return textNode("integer", String.valueOf(value));
+  }
+
+  /** Create a real node and return it. */
+  private Node realNode(double value) {
+    return textNode("real", String.valueOf(value));
+  }
+
+  /** Convert a Java value to a plist value node. */
+  private Node valueNode(Object value) {
+    if (value instanceof String) return textNode("string", (String) value);
+    if (value instanceof Boolean) return booleanNode(((Boolean) value).booleanValue());
+    if (value instanceof Byte
+        || value instanceof Short
+        || value instanceof Integer
+        || value instanceof Long) {
+      return integerNode(((Number) value).longValue());
+    }
+    if (value instanceof Float || value instanceof Double) {
+      return realNode(((Number) value).doubleValue());
+    }
+    if (value instanceof java.util.Map<?, ?>) {
+      Element dict = doc.createElement("dict");
+      for (java.util.Map.Entry<?, ?> entry : ((java.util.Map<?, ?>) value).entrySet()) {
+        if (!(entry.getKey() instanceof String)) continue;
+        Object childValue = entry.getValue();
+        if (childValue == null) continue;
+        Node childNode = valueNode(childValue);
+        if (childNode == null) continue;
+        addKey(dict, (String) entry.getKey());
+        dict.appendChild(childNode);
+      }
+      return dict;
+    }
+    if (value instanceof java.lang.Iterable<?>) {
+      Element array = doc.createElement("array");
+      for (Object item : (java.lang.Iterable<?>) value) {
+        if (item == null) continue;
+        Node itemNode = valueNode(item);
+        if (itemNode != null) array.appendChild(itemNode);
+      }
+      return array;
+    }
+    if (value instanceof Object[]) {
+      Element array = doc.createElement("array");
+      for (Object item : (Object[]) value) {
+        if (item == null) continue;
+        Node itemNode = valueNode(item);
+        if (itemNode != null) array.appendChild(itemNode);
+      }
+      return array;
+    }
+    return null;
+  }
+
+  /** Remove an existing key and its following value node from a dictionary when present. */
+  private void removeEntry(Node parent, String key) {
+    Node child = parent.getFirstChild();
+    while (child != null) {
+      Node next = child.getNextSibling();
+      if (child instanceof Element
+          && "key".equals(((Element) child).getTagName())
+          && key.equals(child.getTextContent())) {
+        parent.removeChild(child);
+        Node valueNode = next;
+        while (valueNode != null && !(valueNode instanceof Element)) {
+          valueNode = valueNode.getNextSibling();
+        }
+        if (valueNode != null) parent.removeChild(valueNode);
+        return;
+      }
+      child = next;
+    }
   }
 
   /** Add an array entry with string values to a parent dictionary. */
@@ -209,7 +342,8 @@ public class Plist {
       java.util.List<String> vmOptions,
       Boolean startOnMainThread,
       java.util.List<String> mainArguments,
-      String splashFile) {
+      String splashFile,
+      java.util.Map<String, ?> customEntries) {
     // Root javaX key
     addKey("JavaX");
     Element javaX = doc.createElement("dict");
@@ -230,6 +364,7 @@ public class Plist {
     createPropertiesEntry(javaX, properties);
     createArrayEntry(javaX, "VMOptions", vmOptions);
     createArrayEntry(javaX, "Arguments", mainArguments);
+    createEntries(javaX, customEntries);
     root.appendChild(javaX);
   }
 

@@ -245,6 +245,26 @@ it is copied as well (for example `splash.png` -> `splash@2x.png`).
 Example: `"${projectDir}/src/build/splash.png"`
 
 
+**additionalPlistEntries** (Optional, default: `{}`)
+
+Additional top-level `Info.plist` entries merged alongside the plugin-generated defaults.
+These are purely additive; generated keys are preserved. Only a specific key you name is overridden if it already exists.
+
+Supported value types: `String`, `Boolean`, numbers, lists/arrays, and nested maps.
+
+Example: `[LSUIElement: true, NSCameraUsageDescription: "Camera is required for scanning"]`
+
+
+**additionalJavaXEntries** (Optional, default: `{}`)
+
+Additional keys for the `JavaX` dictionary in `Info.plist`, merged alongside the generated JavaX entries.
+These are purely additive; generated keys are preserved. Only a specific key you name is overridden if it already exists.
+
+Supported value types: `String`, `Boolean`, numbers, lists/arrays, and nested maps.
+
+Example: `[JVMVersion: "21+", WorkingDirectory: "$APP_ROOT/Contents/Resources"]`
+
+
 #### JavaX Example (JVM args + startup flags)
 
 ```groovy
@@ -268,6 +288,18 @@ macApp {
     startOnMainThread = true
     mainArguments = ['--profile', 'prod']
     splashFile = "${projectDir}/src/build/splash.png"
+
+    // Optional additional Info.plist entries
+    additionalPlistEntries = [
+        LSUIElement             : true,
+        NSCameraUsageDescription: 'Camera is required for scanning'
+    ]
+
+    // Optional additional JavaX entries
+    additionalJavaXEntries = [
+        JVMVersion      : '21+',
+        WorkingDirectory: '$APP_ROOT/Contents/Resources'
+    ]
 }
 ```
 
@@ -518,6 +550,7 @@ public static final String name = meta.getString("name");
 * Use of [NativeJavaApplicationStub](https://github.com/paginagmbh/NativeJavaApplicationStub) as default source.
 * Added JavaX-related `macApp` properties: `javaProperties`, `vmOptions`, `startOnMainThread`, `mainArguments`, and `splashFile`. `vmOptions`/`javaProperties` now default from `application.applicationDefaultJvmArgs`.
 * No longer requires curl/brew/node/electron-installer-dmg as dependencies.
+* Added support for additional plist entries.
 
 
 ### 1.x.x
