@@ -19,6 +19,7 @@ cache:
 
 stages:
     - prepare next development cycle
+    - test
     - deploy
     - release
 
@@ -32,6 +33,17 @@ stages:
         - export GRADLE_USER_HOME=`pwd`/.gradle
         - mkdir -p $GRADLE_USER_HOME || true
         - cp .gitlab-ci/artifactory-access/init.gradle $GRADLE_USER_HOME
+
+
+test:
+    extends: .gradle_template
+    stage: test
+    artifacts:
+        reports:
+            junit:
+                - build/test-results/test/TEST-*.xml
+    script:
+        - ./gradlew check
 
 
 deploy:registry:gitlab:

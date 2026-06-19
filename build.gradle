@@ -16,6 +16,14 @@ plugins {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
+
+    testImplementation gradleTestKit()
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 group = "gmbh.pagina.tools.gradle"
