@@ -444,12 +444,13 @@ This task depends on `signedAndNotarizedMacApp`, so running it directly will per
 ```groovy
 signedAndNotarizedMacApp {
     existingMacAppBundle = "${projectDir}/dist/Example App.app"
+    outdir = "${buildDir}/signedMacAppFromExisting" // Optional
 
-    // Signing credentials can be configured directly or via environment variables.
-    appleSignID = providers.environmentVariable("APPLE_SIGN_ID").orElse("Developer ID Application: ...").getOrNull()
-    appleIDUser = providers.environmentVariable("APPLE_ID_USER").orElse("apple@example.com").getOrNull()
-    appleIDPassword = providers.environmentVariable("APPLE_ID_PASSWORD").orElse("app-specific-password").getOrNull()
-    appleIDTeamID = providers.environmentVariable("APPLE_ID_TEAM_ID").orElse("ASDF213FDSA").getOrNull()
+    // Signing credentials can be configured directly or implicitly via environment variables.
+    appleSignID = "Developer ID Application: ..." // APPLE_SIGN_ID
+    appleIDUser = "apple@example.com" // APPLE_ID_USER
+    appleIDPassword = "app-specific-password" // APPLE_ID_PASSWORD
+    appleIDTeamID = "ASDF213FDSA" // APPLE_ID_TEAM_ID
 }
 ```
 

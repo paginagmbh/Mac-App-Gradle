@@ -334,6 +334,7 @@ public class Plist {
    * @param startOnMainThread Whether to launch on the macOS main thread.
    * @param mainArguments Arguments passed to the Java main class.
    * @param splashFile Optional splash file name.
+   * @param customEntries Additional JavaX entries to merge into the generated dictionary.
    */
   public void javaX(
       String mainClass,
