@@ -13,7 +13,7 @@ public final class JavaApplicationStubPresets {
           "universalJavaApplicationStub");
 
   /** Preset for the precompiled ZIP distribution of universalJavaApplicationStub. */
-  public static final JavaApplicationStubSource UNIVERSAL_JAVA_APPLICATION_STUB_PROCOMPILED =
+  public static final JavaApplicationStubSource UNIVERSAL_JAVA_APPLICATION_STUB_PRECOMPILED =
       new JavaApplicationStubSource(
           "https://github.com/tofi86/universalJavaApplicationStub/releases/download/v3.3.0/universalJavaApplicationStub-v3.3.0-binary-macos-10.15.zip",
           true,

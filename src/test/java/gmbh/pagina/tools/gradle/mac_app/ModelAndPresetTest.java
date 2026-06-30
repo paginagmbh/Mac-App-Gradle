@@ -36,7 +36,7 @@ class ModelAndPresetTest {
     JavaApplicationStubSource shell =
         JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_SHELL;
     JavaApplicationStubSource precompiled =
-        JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PROCOMPILED;
+        JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PRECOMPILED;
     JavaApplicationStubSource nativeV1 = JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1;
 
     assertNotNull(shell);

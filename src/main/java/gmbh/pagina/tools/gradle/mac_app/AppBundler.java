@@ -870,8 +870,8 @@ public class AppBundler extends DefaultTask {
    * @return precompiled preset source
    */
   @Internal
-  public JavaApplicationStubSource getUniversalJavaApplicationStubProcompiled() {
-    return JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PROCOMPILED;
+  public JavaApplicationStubSource getUniversalJavaApplicationStubPrecompiled() {
+    return JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PRECOMPILED;
   }
 
   /**

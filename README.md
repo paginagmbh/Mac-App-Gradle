@@ -67,7 +67,7 @@ javaApplicationStub {
 Built-in source presets:
 
 * `universalJavaApplicationStubShell`
-* `universalJavaApplicationStubProcompiled`
+* `universalJavaApplicationStubPrecompiled`
 * `nativeJavaApplicationStubv1`
 
 Repositories:
@@ -84,7 +84,7 @@ macApp {
 
 // or
 javaApplicationStub {
-    source = universalJavaApplicationStubProcompiled
+    source = universalJavaApplicationStubPrecompiled
 }
 ```
 
