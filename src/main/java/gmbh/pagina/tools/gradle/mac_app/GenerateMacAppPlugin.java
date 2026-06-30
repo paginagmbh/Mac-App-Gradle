@@ -1,5 +1,6 @@
 package gmbh.pagina.tools.gradle.mac_app;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,13 +109,23 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
     // Only sign the mac app after it exists.
     signAndNotarizeMacApp.configure(
         task -> {
-          task.getAppNameProperty().convention(appBundler.flatMap(AppBundler::getAppNameProperty));
+          task.getProjectVersionProperty()
+              .convention(project.provider(() -> String.valueOf(project.getVersion())));
+          task.getAppNameProperty().convention(
+              project.provider(
+                  () ->
+                      task.getExistingMacAppBundleProperty().isPresent()
+                          ? stripAppBundleName(task.getExistingMacAppBundle())
+                          : appBundler.flatMap(AppBundler::getAppNameProperty).get()));
           task.getUnsignedMacAppDirectoryProperty()
               .convention(appBundler.flatMap(AppBundler::getOutdirProperty));
           task.getMacAppIconProperty().convention(appBundler.flatMap(AppBundler::getIconProperty));
-          task.getProjectVersionProperty()
-              .convention(project.provider(() -> String.valueOf(project.getVersion())));
-          task.dependsOn(appBundler);
+          task.dependsOn(
+              project.provider(
+                  () ->
+                      task.getExistingMacAppBundleProperty().isPresent()
+                          ? java.util.Collections.emptyList()
+                          : java.util.Collections.singleton(appBundler)));
         });
 
     signedAndNotarizedMacAppArchive.configure(
@@ -129,5 +140,10 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
         });
 
     signAndNotarizeMacApp.configure(task -> task.finalizedBy(signedAndNotarizedMacAppArchive));
+  }
+
+  private static String stripAppBundleName(File appBundle) {
+    String name = appBundle.getName();
+    return name.endsWith(".app") ? name.substring(0, name.length() - 4) : name;
   }
 }
