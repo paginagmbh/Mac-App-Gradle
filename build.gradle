@@ -27,7 +27,7 @@ test {
 }
 
 group = "gmbh.pagina.tools.gradle"
-version = "2.0.2-SNAPSHOT"
+version = "2.0.2"
 
 javadoc {
     options.encoding = 'UTF-8'
