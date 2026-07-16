@@ -25,4 +25,15 @@ public final class JavaApplicationStubPresets {
           "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v1.0/NativeJavaApplicationStub",
           false,
           "NativeJavaApplicationStub");
+
+  /** Preset for NativeJavaApplicationStub v1.1 binary download. */
+  public static final JavaApplicationStubSource NATIVE_JAVA_APPLICATION_STUB_V1_1 =
+      new JavaApplicationStubSource(
+          "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v1.1/NativeJavaApplicationStub",
+          false,
+          "NativeJavaApplicationStub");
+
+  /** Preset for NativeJavaApplicationStub binary download (latest version). */
+  public static final JavaApplicationStubSource NATIVE_JAVA_APPLICATION_STUB_LATEST =
+      NATIVE_JAVA_APPLICATION_STUB_V1_1;
 }

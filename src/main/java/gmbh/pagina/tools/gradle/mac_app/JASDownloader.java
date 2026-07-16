@@ -32,10 +32,12 @@ public class JASDownloader extends DefaultTask {
   public JASDownloader() {
     setGroup("Make Mac App");
     setDescription("Download the Java application stub required for the app.");
-    getUnzip().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.isUnzip());
+    getUnzip().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_LATEST.isUnzip());
     getStubExecutableName()
-        .convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.getExecutableName());
-    getSourceUrl().convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1.getUrl());
+        .convention(
+            JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_LATEST.getExecutableName());
+    getSourceUrl()
+        .convention(JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_LATEST.getUrl());
     getOutdir().convention(getProject().getLayout().getBuildDirectory().dir("javaApplicationStub"));
   }
 
@@ -157,6 +159,16 @@ public class JASDownloader extends DefaultTask {
   @Internal
   public JavaApplicationStubSource getNativeJavaApplicationStubv1() {
     return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1;
+  }
+
+  /**
+   * Gets the preset source for NativeJavaApplicationStub v1.1.
+   *
+   * @return native v1.1 preset source
+   */
+  @Internal
+  public JavaApplicationStubSource getNativeJavaApplicationStubv1_1() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1_1;
   }
 
   /**

@@ -50,9 +50,9 @@ This plugin consists of task steps that are executed in order.
 ```groovy
 javaApplicationStub {
     // No manual settings required. These are the defaults:
-    source = nativeJavaApplicationStubv1
+    source = nativeJavaApplicationStubLatest
     // equivalent explicit values:
-    // url = "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/v1.0/NativeJavaApplicationStub"
+    // url = "https://github.com/paginagmbh/NativeJavaApplicationStub/releases/download/<<latest version>>/NativeJavaApplicationStub"
     // unzip = false
     // executableName = "NativeJavaApplicationStub"
     // outdir = "${buildDir}/javaApplicationStub"
@@ -62,13 +62,15 @@ javaApplicationStub {
 
 #### Arguments
 
-**source** (Optional, default: `nativeJavaApplicationStubv1`)
+**source** (Optional, default: `nativeJavaApplicationStubv1_1`)
 
 Built-in source presets:
 
 * `universalJavaApplicationStubShell`
 * `universalJavaApplicationStubPrecompiled`
 * `nativeJavaApplicationStubv1`
+* `nativeJavaApplicationStubv1_1`
+* `nativeJavaApplicationStubLatest`
 
 Repositories:
 
@@ -542,6 +544,18 @@ public static final String name = meta.getString("name");
 
 
 ## Changelog
+
+### 2.0.2
+
+* Added support for NativeJavaApplicationStub v1.1.
+* Added shorthand for latest NativeJavaApplicationStub: `nativeJavaApplicationStubLatest`.
+
+
+### 2.0.1
+
+* Fixed issue when signing an existing app bundle.
+* Fixed typo.
+
 
 ### 2.0.0
 

@@ -885,6 +885,26 @@ public class AppBundler extends DefaultTask {
   }
 
   /**
+   * Gets the NativeJavaApplicationStub v1.1 preset source.
+   *
+   * @return native v1.1 preset source
+   */
+  @Internal
+  public JavaApplicationStubSource getNativeJavaApplicationStubv1_1() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1_1;
+  }
+
+  /**
+   * Gets the NativeJavaApplicationStub latest preset source.
+   *
+   * @return native latest preset source
+   */
+  @Internal
+  public JavaApplicationStubSource getNativeJavaApplicationStubLatest() {
+    return JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_LATEST;
+  }
+
+  /**
    * The app bundle that is generated.
    *
    * @return generated app bundle directory

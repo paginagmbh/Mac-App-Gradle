@@ -38,17 +38,27 @@ class ModelAndPresetTest {
     JavaApplicationStubSource precompiled =
         JavaApplicationStubPresets.UNIVERSAL_JAVA_APPLICATION_STUB_PRECOMPILED;
     JavaApplicationStubSource nativeV1 = JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1;
+    JavaApplicationStubSource nativeV1_1 =
+        JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_V1_1;
+    JavaApplicationStubSource nativeLatest =
+        JavaApplicationStubPresets.NATIVE_JAVA_APPLICATION_STUB_LATEST;
 
     assertNotNull(shell);
     assertNotNull(precompiled);
     assertNotNull(nativeV1);
+    assertNotNull(nativeV1_1);
+    assertNotNull(nativeLatest);
 
     assertFalse(shell.isUnzip());
     assertTrue(precompiled.isUnzip());
     assertFalse(nativeV1.isUnzip());
+    assertFalse(nativeV1_1.isUnzip());
+    assertFalse(nativeLatest.isUnzip());
 
     assertEquals("universalJavaApplicationStub", shell.getExecutableName());
     assertEquals("universalJavaApplicationStub", precompiled.getExecutableName());
     assertEquals("NativeJavaApplicationStub", nativeV1.getExecutableName());
+    assertEquals("NativeJavaApplicationStub", nativeV1_1.getExecutableName());
+    assertEquals("NativeJavaApplicationStub", nativeLatest.getExecutableName());
   }
 }
