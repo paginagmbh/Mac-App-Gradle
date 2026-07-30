@@ -890,18 +890,41 @@ public class SignAndNotarize extends DefaultTask {
   private void notarizeDmg() {
     headline("Notarizing DMG");
     String dmgPath = getNotarizedDMG().getAbsolutePath();
-    Shell.sh(
-        "xcrun",
-        "notarytool",
-        "submit",
-        dmgPath,
-        "--wait",
-        "--apple-id",
-        getAppleIDUser(),
-        "--password",
-        getAppleIDPassword(),
-        "--team-id",
-        getAppleIDTeamID());
+    Shell notarizeCommand =
+        Shell.sh(
+            "xcrun",
+            "notarytool",
+            "submit",
+            dmgPath,
+            "--wait",
+            "--apple-id",
+            getAppleIDUser(),
+            "--password",
+            getAppleIDPassword(),
+            "--team-id",
+            getAppleIDTeamID());
+
+    java.util.Optional<String> id =
+        notarizeCommand
+            .out
+            .lines()
+            .filter(line -> line.matches("\\s*id: [0-9a-fA-F\\-]+"))
+            .map(line -> line.replaceAll("\\s*id: ([0-9a-fA-F\\-]+)", "$1"))
+            .findFirst();
+
+    id.ifPresent(
+        s ->
+            Shell.sh(
+                "xcrun",
+                "notarytool",
+                "log",
+                s,
+                "--team-id",
+                getAppleIDTeamID(),
+                "--apple-id",
+                getAppleIDUser(),
+                "--password",
+                getAppleIDPassword()));
 
     // validate. Throw an error if the validation did not work.
     Shell.sh("spctl", "-a", "-t", "install", "-vv", dmgPath);

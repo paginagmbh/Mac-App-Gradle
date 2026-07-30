@@ -545,6 +545,11 @@ public static final String name = meta.getString("name");
 
 ## Changelog
 
+### 2.0.3
+
+* Query the notarization log after notarization which aids debugging.
+
+
 ### 2.0.2
 
 * Added support for NativeJavaApplicationStub v1.1.
