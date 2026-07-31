@@ -56,7 +56,7 @@ public class Shell {
    * @return {@code true} when the command exits with code zero.
    */
   protected static boolean test(String... command) {
-    Shell shell = sh(true, true, false, command);
+    Shell shell = sh(true, true, false, null, command);
     // If the output is more than two lines truncate it. Otherwise print it in full.
     if (shell.getLines().length > 2) logger.info("(multiple lines truncated)");
     else logger.info(shell.out.strip());
@@ -71,7 +71,7 @@ public class Shell {
    * @return Shell result including output and exit code.
    */
   protected static Shell failOk(String... command) {
-    return sh(true, true, true, command);
+    return sh(true, true, true, null, command);
   }
 
   /**
@@ -81,7 +81,18 @@ public class Shell {
    * @return Shell result including output and exit code.
    */
   protected static Shell sh(String... command) {
-    return sh(false, true, true, command);
+    return sh(false, true, true, null, command);
+  }
+
+  /**
+   * Execute a shell command in a specific working directory.
+   *
+   * @param workingDirectory Working directory used for command execution.
+   * @param command Command and arguments.
+   * @return Shell result including output and exit code.
+   */
+  protected static Shell shInDir(java.io.File workingDirectory, String... command) {
+    return sh(false, true, true, workingDirectory, command);
   }
 
   /**
@@ -95,10 +106,15 @@ public class Shell {
    * @return A {@link Shell} object with the shell output and exit code.
    */
   private static Shell sh(
-      boolean errorOk, boolean printPrompt, boolean printOutput, String... command) {
+      boolean errorOk,
+      boolean printPrompt,
+      boolean printOutput,
+      java.io.File workingDirectory,
+      String... command) {
     // Set up the process builder
     ProcessBuilder builder = new ProcessBuilder();
     builder.command(command);
+    if (workingDirectory != null) builder.directory(workingDirectory);
 
     // Print the prompt, neatly formatted
     if (printPrompt)
@@ -155,6 +171,9 @@ public class Shell {
         throw new GradleException(
             "An error occured executing '"
                 + String.join(" ", builder.command())
+                + (builder.directory() != null
+                    ? "' (cwd: " + builder.directory().getAbsolutePath() + ")"
+                    : "'")
                 + "':\n"
                 + messageBuffer
                 + errSecMessage

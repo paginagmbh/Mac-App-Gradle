@@ -109,8 +109,7 @@ The file name expected after download/unpack and copied into the app bundle.
 #### API
 
 The output file is described by the task property *targetFile*.
-This is usually either *outdir/<executableName>* or
-*outdir/<downloadFileNameWithoutExtension>/<executableName>*.
+This is usually either *outdir/<executableName>* or *outdir/<downloadFileNameWithoutExtension>/<executableName>*.
 The first is used for direct downloads, the second for zipped sources.
 
 
@@ -223,8 +222,7 @@ Example: `["-Xmx1g", "-XX:+UseG1GC"]`
 
 **startOnMainThread** (Optional, default: `null`)
 
-If set to `true`, writes JavaX `StartOnMainThread` to enable launch on the macOS main thread
-(mapped by the stub to `-XstartOnFirstThread`).
+If set to `true`, writes JavaX `StartOnMainThread` to enable launch on the macOS main thread (mapped by the stub to `-XstartOnFirstThread`).
 
 Example: `true`
 
@@ -309,8 +307,7 @@ macApp {
 #### API
 
 The app bundle is described by the task property *macApp* and lives at *outdir/appName.app*.
-For compatibility, the task still exposes *macAppTarGz* as the conventional archive path
-*outdir/appName.tar.gz*, but archive generation is handled by `macAppArchive`.
+For compatibility, the task still exposes *macAppTarGz* as the conventional archive path *outdir/appName.tar.gz*, but archive generation is handled by `macAppArchive`.
 
 
 ### macAppArchive
@@ -372,8 +369,7 @@ This argument is optional. If omitted, no certificate is imported.
 **certificatePassword** (Optional, default: env *$APPLE_SIGNING_PASSWORD* or env *$APPLE_SIGNING_PASSWORD_BASE64*)
 
 Password for importing the P12 certificate.
-If not provided as a Groovy argument, it can be read either as plain text from
-*$APPLE_SIGNING_PASSWORD* or base64-encoded from *$APPLE_SIGNING_PASSWORD_BASE64*.
+If not provided as a Groovy argument, it can be read either as plain text from *$APPLE_SIGNING_PASSWORD* or base64-encoded from *$APPLE_SIGNING_PASSWORD_BASE64*.
 
 
 **appleSignID** (REQUIRED, default: env *$APPLE_SIGN_ID*)
@@ -406,11 +402,20 @@ If not provided as a Groovy argument, it is read from the *$APPLE_ID_TEAM_ID* en
 Example: *"ASDF213FDSA"*
 
 
+**signNestedBinaries** (Optional, default: `false`)
+
+If set to `true`, the plugin will recursively search for and sign binaries nested inside jar/zip files.
+This is useful when the app bundle contains embedded libraries with unsigned dylibs or other binaries that must be signed for notarization to succeed.
+When enabled, the plugin extracts all jar/zip archives, recursively processes nested archives inside them as well, signs any dylibs, frameworks, bundles, etc. found within them, and re-packages the archives.
+This covers cases such as `package.zip` containing a `.jar` which itself contains macOS `.dylib` files.
+
+Example: `true`
+
+
 **existingMacAppBundle** (Optional, default: `null`)
 
 Path to an existing `.app` bundle that should be signed/notarized directly.
-If set, the signing task uses this bundle as input instead of
-*unsignedMacAppDirectory/appName.app*.
+If set, the signing task uses this bundle as input instead of *unsignedMacAppDirectory/appName.app*.
 This is the same `signedAndNotarizedMacApp` task; the input bundle is just overridden.
 
 Example: `"${projectDir}/dist/Example App.app"`
@@ -423,8 +428,7 @@ Example: `"${projectDir}/dist/Example App.app"`
 
 The signed app and dmg are described by the task properties *signedAndNotarizedMacApp* and *notarizedDMG*.
 These are usually *outdir/appName.app* and *outdir/appName.dmg*.
-For compatibility, the task still exposes *signedAndNotarizedMacAppTarGz* as the conventional archive path
-*outdir/appName.tar.gz*, but archive generation is handled by `signedAndNotarizedMacAppArchive`.
+For compatibility, the task still exposes *signedAndNotarizedMacAppTarGz* as the conventional archive path *outdir/appName.tar.gz*, but archive generation is handled by `signedAndNotarizedMacAppArchive`.
 
 
 ### signedAndNotarizedMacAppArchive
@@ -544,6 +548,12 @@ public static final String name = meta.getString("name");
 
 
 ## Changelog
+
+### 2.0.4
+
+* Added `signNestedBinaries` parameter to recursively sign binaries nested inside jar/zip files.
+  This resolves notarization issues when embedded libraries contain unsigned dylibs or other binaries, including nested archive layouts such as `package.zip` -> `.jar` -> `.dylib`.
+
 
 ### 2.0.3
 

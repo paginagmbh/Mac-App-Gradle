@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -120,6 +121,14 @@ public class SignAndNotarize extends DefaultTask {
   /** Project version used in generated DMG naming. */
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
 
+  /**
+   * Whether to recursively sign binaries nested inside jar/zip files. This is useful when the app
+   * bundle contains embedded libraries with unsigned dylibs or other binaries that must be signed
+   * for notarization to succeed. Defaults to false.
+   */
+  private final Property<Boolean> signNestedBinaries =
+      getProject().getObjects().property(Boolean.class);
+
   {
     keychainName.convention("TemporaryPaginaSigningKeychain.keychain");
     keychainPassword.convention("TotallySecretPassword");
@@ -130,6 +139,7 @@ public class SignAndNotarize extends DefaultTask {
         getProject().getProviders().environmentVariable("APPLE_ID_PASSWORD"));
     appleIDTeamID.convention(getProject().getProviders().environmentVariable("APPLE_ID_TEAM_ID"));
     outdir.convention(getProject().getLayout().getBuildDirectory().dir("signedMacApp"));
+    signNestedBinaries.convention(false);
   }
 
   /**
@@ -490,6 +500,35 @@ public class SignAndNotarize extends DefaultTask {
   }
 
   /**
+   * Gets whether to recursively sign binaries nested inside jar/zip files.
+   *
+   * @return true if nested binary signing is enabled, false otherwise
+   */
+  @Input
+  public boolean isSignNestedBinaries() {
+    return signNestedBinaries.get();
+  }
+
+  /**
+   * Sets whether to recursively sign binaries nested inside jar/zip files.
+   *
+   * @param signNestedBinaries true to enable nested binary signing, false to disable
+   */
+  public void setSignNestedBinaries(boolean signNestedBinaries) {
+    this.signNestedBinaries.set(signNestedBinaries);
+  }
+
+  /**
+   * Returns the sign nested binaries property.
+   *
+   * @return sign nested binaries property
+   */
+  @Internal
+  public Property<Boolean> getSignNestedBinariesProperty() {
+    return signNestedBinaries;
+  }
+
+  /**
    * Returns the signed and notarized app bundle directory.
    *
    * @return signed app directory
@@ -712,7 +751,8 @@ public class SignAndNotarize extends DefaultTask {
   /**
    * Imports root certificates required for signing.
    *
-   * <p>Reference: <a href="https://stackoverflow.com/questions/69464483">Stack Overflow discussion</a>
+   * <p>Reference: <a href="https://stackoverflow.com/questions/69464483">Stack Overflow
+   * discussion</a>
    */
   private void importRootCertificates() {
     headline("Importing root certificates");
@@ -816,6 +856,164 @@ public class SignAndNotarize extends DefaultTask {
     if (verify) {
       Shell.sh("codesign", "--verify", "--strict", "--deep", "--verbose", signPath);
       Shell.sh("spctl", "-a", "-t", "exec", "-vv", signPath);
+    }
+  }
+
+  /**
+   * Recursively find and sign binaries nested inside jar/zip files within the app bundle. This
+   * handles the case where embedded libraries contain unsigned dylibs or other binaries that must
+   * be signed for notarization to succeed.
+   */
+  private void codeSignNestedBinaries() {
+    headline("Signing Nested Binaries in Archives");
+    File appDir = getSignedAndNotarizedMacApp();
+    List<String> binaryExtensions =
+        Arrays.asList(".dylib", ".so", ".framework", ".bundle", ".kext", ".appex");
+
+    try (Stream<Path> stream =
+        Files.find(
+            appDir.toPath(), 32, (path, attrs) -> attrs.isRegularFile() && isArchivePath(path))) {
+      for (Path archivePath : stream.collect(Collectors.toList())) {
+        processArchive(archivePath.toFile(), binaryExtensions);
+      }
+    } catch (IOException e) {
+      throw new RuntimeException("Error scanning for nested archives", e);
+    }
+  }
+
+  /**
+   * Returns whether the given path points to a supported nested archive type.
+   *
+   * @param path path to check
+   * @return {@code true} for {@code .jar} and {@code .zip} files
+   */
+  private boolean isArchivePath(Path path) {
+    String normalized = path.toString().toLowerCase();
+    return normalized.endsWith(".jar") || normalized.endsWith(".zip");
+  }
+
+  /**
+   * Returns whether the given path points to a signable binary matched by extension.
+   *
+   * @param path path to check
+   * @param binaryExtensions configured signable extensions
+   * @return {@code true} if the file should be signed directly
+   */
+  private boolean isSignableBinaryPath(Path path, List<String> binaryExtensions) {
+    String normalized = path.toString().toLowerCase();
+    return binaryExtensions.stream().anyMatch(normalized::endsWith);
+  }
+
+  /**
+   * Recursively process nested jar/zip files contained in an already extracted archive directory.
+   *
+   * <p>This is the crucial step for cases like {@code package.zip -> parsx-konverter.jar ->
+   * flatlaf-...dylib}. Without this recursion, only top-level archives in the app bundle would be
+   * processed, while inner archives would remain untouched.
+   *
+   * @param directory extracted archive root
+   * @param binaryExtensions configured signable extensions
+   * @throws IOException if traversal fails
+   */
+  private void processNestedArchivesInDirectory(Path directory, List<String> binaryExtensions)
+      throws IOException {
+    try (Stream<Path> stream =
+        Files.find(directory, 32, (path, attrs) -> attrs.isRegularFile() && isArchivePath(path))) {
+      for (Path archivePath :
+          stream
+              .sorted(Comparator.comparingInt(Path::getNameCount).reversed())
+              .collect(Collectors.toList())) {
+        processArchive(archivePath.toFile(), binaryExtensions);
+      }
+    }
+  }
+
+  /**
+   * Sign direct binaries found inside an extracted archive.
+   *
+   * @param directory extracted archive root
+   * @param binaryExtensions configured signable extensions
+   * @throws IOException if traversal fails
+   */
+  private void signDirectBinariesInDirectory(Path directory, List<String> binaryExtensions)
+      throws IOException {
+    try (Stream<Path> stream =
+        Files.find(
+            directory,
+            32,
+            (path, attrs) ->
+                attrs.isRegularFile() && isSignableBinaryPath(path, binaryExtensions))) {
+      stream.forEach(
+          binaryPath -> {
+            try {
+              codesign(binaryPath.toFile(), false);
+            } catch (Exception e) {
+              logger.warn("Failed to sign binary: " + binaryPath + ", reason: " + e.getMessage());
+            }
+          });
+    }
+  }
+
+  /**
+   * Sign nested app bundles found inside an extracted archive, deepest first.
+   *
+   * @param directory extracted archive root
+   * @throws IOException if traversal fails
+   */
+  private void signNestedAppBundlesInDirectory(Path directory) throws IOException {
+    try (Stream<Path> appStream =
+        Files.find(
+            directory,
+            32,
+            (path, attrs) ->
+                attrs.isDirectory() && path.getFileName().toString().endsWith(".app"))) {
+      appStream
+          .sorted(Comparator.comparingInt(Path::getNameCount).reversed())
+          .forEach(appPath -> codesign(appPath.toFile(), false));
+    }
+  }
+
+  /**
+   * Process a single archive (jar/zip) file, extracting it, signing binaries within, and
+   * re-packaging it. Uses native {@code unzip}/{@code zip} commands which preserve Unix file
+   * permissions on macOS. Also signs any nested {@code .app} bundles found inside the archive.
+   *
+   * @param archiveFile the jar or zip file to process
+   * @param binaryExtensions list of file extensions that should be signed
+   * @throws IOException if archive processing fails
+   */
+  private void processArchive(File archiveFile, List<String> binaryExtensions) throws IOException {
+    Path tempDir = Files.createTempDirectory("sign_archive_");
+    // createTempFile gives us a unique path; delete the placeholder so zip creates a fresh archive.
+    Path repackedArchive = Files.createTempFile("repacked_", archiveFile.getName());
+    Files.delete(repackedArchive);
+
+    try {
+      // Extract preserving Unix file permissions (unzip handles this natively on macOS)
+      Shell.sh(
+          "unzip", "-o", archiveFile.getAbsolutePath(), "-d", tempDir.toAbsolutePath().toString());
+
+      // First, recursively process nested jar/zip files so binaries hidden inside them are signed
+      // before this archive is packed again.
+      processNestedArchivesInDirectory(tempDir, binaryExtensions);
+
+      // Then sign binaries and nested apps that are directly visible in this extracted archive.
+      signDirectBinariesInDirectory(tempDir, binaryExtensions);
+      signNestedAppBundlesInDirectory(tempDir);
+
+      // Repack preserving Unix permissions (zip handles this natively on macOS).
+      // Must run from tempDir so that entry paths inside the archive are relative.
+      Shell.shInDir(
+          tempDir.toFile(), "zip", "-r", repackedArchive.toAbsolutePath().toString(), ".");
+
+      // Replace the original archive with the re-packaged one
+      Files.delete(archiveFile.toPath());
+      Files.copy(repackedArchive, archiveFile.toPath());
+
+      subHeadline("Signed archive: " + archiveFile.getName());
+    } finally {
+      FileUtils.deleteRecursively(tempDir.toFile());
+      Files.deleteIfExists(repackedArchive);
     }
   }
 
@@ -1006,6 +1204,7 @@ public class SignAndNotarize extends DefaultTask {
       importSigningCertificate();
       makeCertificateAvailable();
       copyAppOver();
+      if (isSignNestedBinaries()) codeSignNestedBinaries();
       codeSignAll();
       createDmg();
       codesignDmg();
