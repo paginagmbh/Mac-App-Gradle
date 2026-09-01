@@ -1009,7 +1009,7 @@ public class SignAndNotarize extends DefaultTask {
       // Repack preserving Unix permissions (zip handles this natively on macOS).
       // Must run from tempDir so that entry paths inside the archive are relative.
       Shell.shInDir(
-          tempDir.toFile(), "zip", "-r", repackedArchive.toAbsolutePath().toString(), ".");
+          tempDir.toFile(), "zip", "-q", "-r", repackedArchive.toAbsolutePath().toString(), ".");
 
       // Replace the original archive with the re-packaged one
       Files.delete(archiveFile.toPath());
