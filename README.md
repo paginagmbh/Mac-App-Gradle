@@ -549,6 +549,11 @@ public static final String name = meta.getString("name");
 
 ## Changelog
 
+### 2.0.5
+
+* More quietly extract zips to keep the log short.
+
+
 ### 2.0.4
 
 * Added `signNestedBinaries` parameter to recursively sign binaries nested inside jar/zip files.
