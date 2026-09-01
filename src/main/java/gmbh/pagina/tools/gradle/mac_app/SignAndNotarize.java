@@ -991,7 +991,12 @@ public class SignAndNotarize extends DefaultTask {
     try {
       // Extract preserving Unix file permissions (unzip handles this natively on macOS)
       Shell.sh(
-          "unzip", "-o", archiveFile.getAbsolutePath(), "-d", tempDir.toAbsolutePath().toString());
+          "unzip",
+          "-q",
+          "-o",
+          archiveFile.getAbsolutePath(),
+          "-d",
+          tempDir.toAbsolutePath().toString());
 
       // First, recursively process nested jar/zip files so binaries hidden inside them are signed
       // before this archive is packed again.
