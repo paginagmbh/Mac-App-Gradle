@@ -1,10 +1,10 @@
 package gmbh.pagina.tools.gradle.mac_app;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -591,17 +591,13 @@ public class SignAndNotarize extends DefaultTask {
   // Methods To Fill Variables At Runtime
   // ===============================================================================================
 
-  /**
-   * Delete the certificate after use. This is set when loading the certificate from base64 data. It
-   * will not be deleted if the file already existed before.
-   */
-  private boolean deleteCertificateAfter = false;
+  private Path temporaryCertificate;
 
   /**
    * Get the path to the certificate file. Might be {@link null}. If the <em>$APPLE_SIGNING_P12</em>
    * variable is set in the environment, it‘ll be returned and interpreted as a path. Alternatively,
    * the environment variable <em>$APPLE_SIGNING_P12_BASE64</em> is base64 decoded and stored inside
-   * a temp file in the output folder. The file will be deleted after, for now its path is returned.
+   * an owner-only file in the system temporary directory, deleted after the task finishes.
    */
   private String getCertificateFilePath() {
     // Try to read the path variable
@@ -611,25 +607,37 @@ public class SignAndNotarize extends DefaultTask {
     // Read the base 64 variable
     String data;
     if ((data = System.getenv("APPLE_SIGNING_P12_BASE64")) != null) {
-      // Mark the temporary certificate to be deleted after use.
-      deleteCertificateAfter = true;
-      // Decode and write the file.
-      File outfile = new File(getOutdir(), "certificate.p12");
-      File parent = outfile.getParentFile();
-      if (parent != null && !parent.exists() && !parent.mkdirs()) {
-        throw new IllegalStateException("Could not create output directory: " + parent);
-      }
-      byte[] decodedBytes = Base64.getDecoder().decode(data);
-      try (FileOutputStream outputStream = new FileOutputStream(outfile)) {
-        outputStream.write(decodedBytes);
-      } catch (IOException e) {
-        throw new GradleScriptException("IOException", e);
-      }
-      return outfile.getAbsolutePath();
+      return writeTemporaryCertificate(data).toString();
     }
 
     // No variables set.
     return null;
+  }
+
+  Path writeTemporaryCertificate(String data) {
+    byte[] decodedBytes = Base64.getDecoder().decode(data);
+    try {
+      temporaryCertificate = Files.createTempFile(
+          "mac-app-signing-", ".p12",
+          PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
+      Files.write(temporaryCertificate, decodedBytes);
+      return temporaryCertificate;
+    } catch (IOException e) {
+      throw new GradleScriptException("Could not write temporary signing certificate", e);
+    } finally {
+      Arrays.fill(decodedBytes, (byte) 0);
+    }
+  }
+
+  private void deleteTemporaryCertificate() {
+    if (temporaryCertificate == null) return;
+    try {
+      Files.deleteIfExists(temporaryCertificate);
+      if (temporaryCertificate.toString().equals(getCertificate())) certificate.set((String) null);
+      temporaryCertificate = null;
+    } catch (IOException e) {
+      throw new GradleScriptException("Could not delete temporary signing certificate", e);
+    }
   }
 
   /**
@@ -1177,8 +1185,6 @@ public class SignAndNotarize extends DefaultTask {
       updateKeychains(false);
     }
 
-    // Delete the certificate
-    if (deleteCertificateAfter && getCertificate() != null) Shell.failOk("rm", getCertificate());
   }
 
   /** The execution of the task. */
@@ -1191,8 +1197,15 @@ public class SignAndNotarize extends DefaultTask {
       return;
     }
 
-    // Create the outdir first. For base64 certificate input we write a temp .p12 into this
-    // folder.
+    try {
+      signAndNotarize();
+    } finally {
+      deleteTemporaryCertificate();
+    }
+  }
+
+  private void signAndNotarize() {
+    // Create the output directory before copying the app.
     if (getOutdir().exists()) FileUtils.deleteRecursively(getOutdir());
     if (!getOutdir().mkdirs()) {
       throw new IllegalStateException("Could not create output directory: " + getOutdir());

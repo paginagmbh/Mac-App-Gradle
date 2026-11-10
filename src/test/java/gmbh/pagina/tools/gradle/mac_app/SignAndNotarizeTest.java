@@ -12,6 +12,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Base64;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -40,6 +42,48 @@ import org.junit.jupiter.api.io.TempDir;
 class SignAndNotarizeTest {
 
   @TempDir Path tempDir;
+
+  public static class MissingSigningIdentity extends SignAndNotarize {
+    @Override
+    public String getAppleSignID() {
+      return null;
+    }
+  }
+
+  @Test
+  @EnabledOnOs(OS.MAC)
+  void temporaryCertificate_isPrivateAndDeletedOnValidationFailure() throws Exception {
+    SignAndNotarize task = ProjectBuilder.builder().build().getTasks()
+        .create("sign", MissingSigningIdentity.class);
+    task.setOutdir(tempDir.resolve("output").toFile());
+    Path certificate = task.writeTemporaryCertificate(
+        Base64.getEncoder().encodeToString("test certificate".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    task.setCertificate(certificate.toString());
+    task.setCertificatePassword("test");
+
+    assertFalse(certificate.startsWith(task.getOutdir().toPath()));
+    assertEquals(PosixFilePermissions.fromString("rw-------"),
+        Files.getPosixFilePermissions(certificate));
+    assertEquals("test certificate", Files.readString(certificate));
+    InvalidUserDataException error = assertThrows(InvalidUserDataException.class, task::taskAction);
+    assertTrue(error.getMessage().contains("appleSignID"));
+    assertFalse(Files.exists(certificate));
+    assertEquals(null, task.getCertificate());
+  }
+
+  @Test
+  @EnabledOnOs(OS.MAC)
+  void suppliedCertificate_isNotDeletedOnValidationFailure() throws Exception {
+    SignAndNotarize task = ProjectBuilder.builder().build().getTasks()
+        .create("sign", MissingSigningIdentity.class);
+    task.setOutdir(tempDir.resolve("output").toFile());
+    Path certificate = Files.writeString(tempDir.resolve("supplied.p12"), "test certificate");
+    task.setCertificate(certificate.toString());
+    task.setCertificatePassword("test");
+
+    assertThrows(InvalidUserDataException.class, task::taskAction);
+    assertEquals("test certificate", Files.readString(certificate));
+  }
 
   @Test
   void appName_isDerivedFromExistingBundleWhenNotExplicitlySet() throws Exception {

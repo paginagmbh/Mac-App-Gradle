@@ -392,9 +392,11 @@ If the keychain is not the login keychain, the certificate is removed from the k
 
 If not provided as a Groovy argument, it is read from the environment variable *$APPLE_SIGNING_P12* by default.
 Alternatively, you can provide the base64-encoded certificate content in *$APPLE_SIGNING_P12_BASE64*.
-It will then be written as a file into the build directory.
+It is decoded into a unique file in the system temporary directory with owner-only read/write permissions (`0600`) and deleted when the task finishes, including on validation or signing failure.
+Certificate files supplied by path are never deleted.
 
-This argument is optional. If omitted, no certificate is imported.
+This argument is optional.
+If omitted, no certificate is imported.
 
 
 **certificatePassword** (Optional, default: env *$APPLE_SIGNING_PASSWORD* or env *$APPLE_SIGNING_PASSWORD_BASE64*)
@@ -623,6 +625,7 @@ public static final String name = meta.getString("name");
 
 * Added DMG customization.
 * Added support for creating archives of unsigned apps.
+* Put the signing P12 certificate into a temporary file.
 
 
 ### 2.0.6
