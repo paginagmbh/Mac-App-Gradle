@@ -9,6 +9,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Action;
 import org.gradle.api.JavaVersion;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -34,6 +35,27 @@ import org.gradle.api.tasks.bundling.Jar;
 /** Create a mac app file structure. */
 @CacheableTask
 public class AppBundler extends DefaultTask {
+  private final DmgOptions dmg = getProject().getObjects().newInstance(DmgOptions.class);
+
+  /**
+   * Returns the layout used by unsigned DMG packaging and as the signed DMG default.
+   *
+   * @return DMG layout options
+   */
+  @Internal
+  public DmgOptions getDmg() {
+    return dmg;
+  }
+
+  /**
+   * Configures the DMG layout without changing the app bundle itself.
+   *
+   * @param action configuration action for the DMG layout
+   */
+  public void dmg(Action<? super DmgOptions> action) {
+    dmg.enable();
+    action.execute(dmg);
+  }
 
   /** Creates the task with default group and description. */
   public AppBundler() {

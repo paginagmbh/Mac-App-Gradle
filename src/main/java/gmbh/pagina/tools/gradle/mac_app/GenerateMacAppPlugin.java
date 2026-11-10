@@ -41,6 +41,8 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
     TaskProvider<AppBundler> appBundler = project.getTasks().register("macApp", AppBundler.class);
     TaskProvider<MacAppArchive> macAppArchive =
         project.getTasks().register("macAppArchive", MacAppArchive.class);
+    TaskProvider<MacAppDmg> macAppDmg =
+        project.getTasks().register("macAppDmg", MacAppDmg.class);
     // Task to sign the unsigned mac app
     TaskProvider<SignAndNotarize> signAndNotarizeMacApp =
         project.getTasks().register("signedAndNotarizedMacApp", SignAndNotarize.class);
@@ -104,11 +106,24 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
           task.dependsOn(appBundler);
         });
 
-    appBundler.configure(task -> task.finalizedBy(macAppArchive));
+    macAppDmg.configure(
+        task -> {
+          task.useDmg(() -> appBundler.get().getDmg());
+          task.getAppName().convention(appBundler.flatMap(AppBundler::getAppNameProperty));
+          task.getProjectVersion()
+              .convention(appBundler.flatMap(AppBundler::getProjectVersionProperty));
+          task.getOutdirProperty().convention(appBundler.flatMap(AppBundler::getOutdirProperty));
+          task.getSourceDirectoryProperty()
+              .convention(appBundler.flatMap(AppBundler::getOutdirProperty));
+          task.dependsOn(appBundler);
+        });
+
+    appBundler.configure(task -> task.finalizedBy(macAppArchive, macAppDmg));
 
     // Only sign the mac app after it exists.
     signAndNotarizeMacApp.configure(
         task -> {
+          task.defaultDmg(() -> appBundler.get().getDmg());
           task.getProjectVersionProperty()
               .convention(project.provider(() -> String.valueOf(project.getVersion())));
           task.getAppNameProperty().convention(

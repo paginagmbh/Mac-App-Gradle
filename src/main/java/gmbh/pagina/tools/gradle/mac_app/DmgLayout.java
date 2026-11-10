@@ -1,12 +1,15 @@
 package gmbh.pagina.tools.gradle.mac_app;
 
 import java.io.IOException;
+import java.io.File;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.GradleScriptException;
+import org.gradle.api.InvalidUserDataException;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -21,6 +24,38 @@ import org.xml.sax.SAXException;
 /** Writes Finder metadata on the actual volume, so background aliases survive compression. */
 final class DmgLayout {
   private DmgLayout() {}
+
+  static void packageApp(
+      DmgOptions options, File source, File output, String appName, String version,
+      File temporaryDirectory) {
+    if (!source.isDirectory()) {
+      throw new InvalidUserDataException("Could not find app bundle to package: " + source);
+    }
+    if (options.getBackgroundPicture().isPresent()
+        && !options.getBackgroundPicture().get().getAsFile().isFile()) {
+      throw new InvalidUserDataException(
+          "DMG background picture does not exist: "
+              + options.getBackgroundPicture().get().getAsFile());
+    }
+    ejectPreviousImages(appName);
+    try {
+      Files.createDirectories(output.toPath().toAbsolutePath().getParent());
+      String volumeName = appName + ' ' + version;
+      if (!options.isEnabled()) {
+        Shell.sh("hdiutil", "create", "-volname", volumeName, "-srcfolder",
+            source.getAbsolutePath(), "-ov", "-format", "UDZO", output.getAbsolutePath());
+        return;
+      }
+      Path workspace = Files.createTempDirectory(temporaryDirectory.toPath(), "dmg-");
+      try {
+        create(options, source.toPath(), output.toPath(), volumeName, appName, workspace);
+      } finally {
+        FileUtils.deleteRecursively(workspace.toFile());
+      }
+    } catch (IOException e) {
+      throw new GradleScriptException("Could not create DMG", e);
+    }
+  }
 
   static void ejectPreviousImages(String appName) {
     try {

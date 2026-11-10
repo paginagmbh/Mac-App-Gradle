@@ -134,7 +134,8 @@ You can then simply run
 ```
 
 Creates the unsigned *.app* bundle.
-The archive is produced by the separate `macAppArchive` task, which `macApp` finalizes automatically.
+The `.tgz` and `.dmg` are produced by `macAppArchive` and `macAppDmg`,
+which `macApp` finalizes automatically. Neither artifact is signed or notarized.
 
 
 #### Arguments
@@ -316,10 +317,40 @@ For compatibility, the task still exposes *macAppTarGz* as the conventional arch
 ./gradlew macAppArchive
 ```
 
-Creates a *.tar.gz* archive from the unsigned *.app* bundle so it can be transferred as a single file while preserving
+Creates a *.tgz* archive from the unsigned *.app* bundle so it can be transferred as a single file while preserving
 internal file permissions.
 
 This task depends on `macApp`, so running it directly will first generate the app bundle if needed.
+
+### macAppDmg
+
+```bash
+./gradlew macAppDmg
+```
+
+Creates `build/unsignedMacApp/appName.dmg` from the unsigned app using macOS `hdiutil`.
+The existing `macAppArchive` task creates `build/unsignedMacApp/appName.tgz`.
+Both tasks follow the `macApp` name and output directory and can also be run directly.
+No signing credentials are required, and no signing, notarization, or stapling is performed.
+
+The DMG supports the same optional layout block as the signed task:
+
+```groovy
+macApp {
+    dmg {
+        backgroundPicture = file("src/dmg/background.png")
+        appIconPosition = [160, 140]
+        applicationsIconPosition = [480, 140]
+        windowSize = [640, 400]
+        iconSize = 72
+    }
+}
+```
+
+The signed DMG uses the `macApp { dmg { ... } }` layout when no signed layout is configured.
+An explicit `signedAndNotarizedMacApp { dmg { ... } }` block replaces that layout entirely, using defaults for omitted settings, without changing the unsigned layout.
+The same Finder automation requirements and automatic `@2x` background detection apply (see DMG background and icon layout below).
+Without a layout block, Finder is not required.
 
 
 ### signedAndNotarizedMacApp
@@ -418,7 +449,7 @@ DMGs are packaged using macOS `hdiutil`; no Python, Node.js, or `jpackage` is re
 Add a nested `dmg` block to let Finder generate the background references and icon layout:
 
 ```groovy
-signedAndNotarizedMacApp {
+macApp {
     dmg {
         backgroundPicture = file("src/dmg/background.png")
         appIconPosition = [160, 140]
@@ -591,6 +622,8 @@ public static final String name = meta.getString("name");
 ### 2.0.7
 
 * Added DMG customization.
+* Added support for creating archives of unsigned apps.
+
 
 ### 2.0.6
 

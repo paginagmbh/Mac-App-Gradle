@@ -124,6 +124,7 @@ public class SignAndNotarize extends DefaultTask {
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
 
   private final DmgOptions dmg = getProject().getObjects().newInstance(DmgOptions.class);
+  private java.util.function.Supplier<DmgOptions> defaultDmg = () -> dmg;
 
   /**
    * Whether to recursively sign binaries nested inside jar/zip files. This is useful when the app
@@ -539,7 +540,11 @@ public class SignAndNotarize extends DefaultTask {
    */
   @Nested
   public DmgOptions getDmg() {
-    return dmg;
+    return dmg.isEnabled() ? dmg : defaultDmg.get();
+  }
+
+  void defaultDmg(java.util.function.Supplier<DmgOptions> options) {
+    defaultDmg = options;
   }
 
   /**
@@ -1077,45 +1082,8 @@ public class SignAndNotarize extends DefaultTask {
   /** Create a DiskImage containing the app and optional Finder layout. */
   void createDmg() {
     headline("Create DMG");
-    if (dmg.getBackgroundPicture().isPresent()
-        && !dmg.getBackgroundPicture().get().getAsFile().isFile()) {
-      throw new InvalidUserDataException(
-          "DMG background picture does not exist: " + dmg.getBackgroundPicture().get().getAsFile());
-    }
-    DmgLayout.ejectPreviousImages(getAppName());
-    if (!dmg.isEnabled()) {
-      createDmgFrom(getSignedAndNotarizedMacApp());
-      return;
-    }
-
-    try {
-      Path workspace = Files.createTempDirectory(getTemporaryDir().toPath(), "dmg-");
-      try {
-        DmgLayout.create(dmg, getSignedAndNotarizedMacApp().toPath(), getNotarizedDMG().toPath(),
-            getAppName() + ' ' + getProjectVersion(), getAppName(), workspace);
-      } finally {
-        FileUtils.deleteRecursively(workspace.toFile());
-      }
-    } catch (IOException e) {
-      throw new GradleScriptException("Could not create DMG", e);
-    }
-  }
-
-  private void createDmgFrom(File source) {
-    String dmgPath = getNotarizedDMG().getAbsolutePath();
-    String volumeName = getAppName() + ' ' + getProjectVersion();
-
-    Shell.sh(
-        "hdiutil",
-        "create",
-        "-volname",
-        volumeName,
-        "-srcfolder",
-        source.getAbsolutePath(),
-        "-ov",
-        "-format",
-        "UDZO",
-        dmgPath);
+    DmgLayout.packageApp(getDmg(), getSignedAndNotarizedMacApp(), getNotarizedDMG(),
+        getAppName(), getProjectVersion(), getTemporaryDir());
   }
 
   /** Codesign the DiskImage. */
