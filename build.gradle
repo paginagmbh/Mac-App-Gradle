@@ -13,17 +13,43 @@ plugins {
     id 'gmbh.pagina.tools.gradle.release' version '1.2.0'
 }
 
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
 
     testImplementation gradleTestKit()
+    testImplementation 'garden.ephemeral.dsstore:macfiles:0.0.9'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
 }
 
 test {
     useJUnitPlatform()
+}
+
+tasks.register('createTestDmg', Test) {
+    description = 'Creates an unsigned sample DMG in build/dmg-test for manual inspection (macOS only).'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform()
+    filter {
+        includeTestsMatching 'gmbh.pagina.tools.gradle.mac_app.SignAndNotarizeTest.createDmg_includesBackgroundAndUnmodifiedApp'
+    }
+    def destination = layout.buildDirectory.dir('dmg-test')
+    outputs.dir(destination)
+    outputs.upToDateWhen { false }
+    doFirst {
+        if (!System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('mac')) {
+            throw new GradleException('createTestDmg requires macOS and hdiutil.')
+        }
+        systemProperty 'macApp.testDmgDirectory', destination.get().asFile.absolutePath
+    }
 }
 
 group = "gmbh.pagina.tools.gradle"

@@ -412,6 +412,45 @@ This covers cases such as `package.zip` containing a `.jar` which itself contain
 Example: `true`
 
 
+#### DMG background and icon layout
+
+DMGs are packaged using macOS `hdiutil`; no Python, Node.js, or `jpackage` is required.
+Add a nested `dmg` block to let Finder generate the background references and icon layout:
+
+```groovy
+signedAndNotarizedMacApp {
+    dmg {
+        backgroundPicture = file("src/dmg/background.png")
+        appIconPosition = [160, 140]
+        applicationsIconPosition = [480, 140]
+        windowSize = [640, 400]
+        iconSize = 72
+    }
+}
+```
+
+Positions use Groovy lists `[x, y]`, not `(x, y)`, and sizes are in pixels.
+The positions, window size, and icon size shown above are the defaults.
+`backgroundPicture` is optional; PNG, JPEG, and TIFF images are supported and converted to TIFF using the macOS `sips` utility.
+Images are not scaled; choose a window size matching the image.
+If a sibling with an `@2x` suffix exists (for example `background@2x.png` next to `background.png`), it is also included as `.background/background@2x.tiff`, preserving its resolution.
+No additional configuration is needed.
+The layout includes an Applications shortcut and uses icon view without automatic arrangement.
+
+Custom layouts require a logged-in graphical macOS session and permission for the process running Gradle (such as Terminal or the IDE) to automate Finder.
+Finder windows briefly open while building.
+Failures stop the build rather than silently producing an unconfigured DMG.
+The plugin does not capture or record the screen.
+
+Without a `dmg` block or layout properties, the existing packaging behavior is unchanged and Finder is not required.
+The app bundle is not modified, and no Java runtime is added.
+
+The background supports providers using `dmg.backgroundPicture.set(tasks.named("generateBackground").flatMap { it.outputFile })`;
+Gradle retains the generator's task dependency.
+Keep the image outside the signing task's `outdir`, which is cleared when signing starts.
+The plugin includes the background and generates `.DS_Store` automatically.
+
+
 **existingMacAppBundle** (Optional, default: `null`)
 
 Path to an existing `.app` bundle that should be signed/notarized directly.
@@ -548,6 +587,10 @@ public static final String name = meta.getString("name");
 
 
 ## Changelog
+
+### 2.0.7
+
+* Added DMG customization.
 
 ### 2.0.6
 

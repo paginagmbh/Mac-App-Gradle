@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.gradle.api.DefaultTask;
+import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.GradleScriptException;
 import org.gradle.api.InvalidUserDataException;
@@ -24,6 +25,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.OutputFile;
@@ -120,6 +122,8 @@ public class SignAndNotarize extends DefaultTask {
 
   /** Project version used in generated DMG naming. */
   private final Property<String> projectVersion = getProject().getObjects().property(String.class);
+
+  private final DmgOptions dmg = getProject().getObjects().newInstance(DmgOptions.class);
 
   /**
    * Whether to recursively sign binaries nested inside jar/zip files. This is useful when the app
@@ -529,6 +533,26 @@ public class SignAndNotarize extends DefaultTask {
   }
 
   /**
+   * Returns the optional Finder layout settings for the DMG.
+   *
+   * @return DMG layout options
+   */
+  @Nested
+  public DmgOptions getDmg() {
+    return dmg;
+  }
+
+  /**
+   * Configures a custom DMG layout, enabling Finder metadata generation.
+   *
+   * @param action configuration action for the DMG layout
+   */
+  public void dmg(Action<? super DmgOptions> action) {
+    dmg.enable();
+    action.execute(dmg);
+  }
+
+  /**
    * Returns the signed and notarized app bundle directory.
    *
    * @return signed app directory
@@ -663,11 +687,10 @@ public class SignAndNotarize extends DefaultTask {
     // Get a list of keychains by regex parsing the output.
     List<String> keychains =
         Stream.of(Shell.sh("security", "list-keychains", "-d", "user").getLines())
-            .map(
-                l ->
-                    l.replaceAll("^.*?([^/]+.keychain).*$", "$1")
-                        .replace(getKeychainName(), "") // filter the custom keychain
-                        .strip())
+            .map(l ->
+                l.replaceAll("^.*?([^/]+.keychain).*$", "$1")
+                    .replace(getKeychainName(), "") // filter the custom keychain
+                    .strip())
             .filter(l -> !l.isEmpty())
             .collect(Collectors.toList());
 
@@ -943,14 +966,13 @@ public class SignAndNotarize extends DefaultTask {
             32,
             (path, attrs) ->
                 attrs.isRegularFile() && isSignableBinaryPath(path, binaryExtensions))) {
-      stream.forEach(
-          binaryPath -> {
-            try {
-              codesign(binaryPath.toFile(), false);
-            } catch (Exception e) {
-              logger.warn("Failed to sign binary: " + binaryPath + ", reason: " + e.getMessage());
-            }
-          });
+      stream.forEach(binaryPath -> {
+        try {
+          codesign(binaryPath.toFile(), false);
+        } catch (Exception e) {
+          logger.warn("Failed to sign binary: " + binaryPath + ", reason: " + e.getMessage());
+        }
+      });
     }
   }
 
@@ -1052,10 +1074,34 @@ public class SignAndNotarize extends DefaultTask {
     codesign(appDir, true);
   }
 
-  /** Create a simple DiskImage that can be notarized. */
-  private void createDmg() {
+  /** Create a DiskImage containing the app and optional Finder layout. */
+  void createDmg() {
     headline("Create DMG");
-    String appPath = getSignedAndNotarizedMacApp().getAbsolutePath();
+    if (dmg.getBackgroundPicture().isPresent()
+        && !dmg.getBackgroundPicture().get().getAsFile().isFile()) {
+      throw new InvalidUserDataException(
+          "DMG background picture does not exist: " + dmg.getBackgroundPicture().get().getAsFile());
+    }
+    DmgLayout.ejectPreviousImages(getAppName());
+    if (!dmg.isEnabled()) {
+      createDmgFrom(getSignedAndNotarizedMacApp());
+      return;
+    }
+
+    try {
+      Path workspace = Files.createTempDirectory(getTemporaryDir().toPath(), "dmg-");
+      try {
+        DmgLayout.create(dmg, getSignedAndNotarizedMacApp().toPath(), getNotarizedDMG().toPath(),
+            getAppName() + ' ' + getProjectVersion(), getAppName(), workspace);
+      } finally {
+        FileUtils.deleteRecursively(workspace.toFile());
+      }
+    } catch (IOException e) {
+      throw new GradleScriptException("Could not create DMG", e);
+    }
+  }
+
+  private void createDmgFrom(File source) {
     String dmgPath = getNotarizedDMG().getAbsolutePath();
     String volumeName = getAppName() + ' ' + getProjectVersion();
 
@@ -1065,7 +1111,7 @@ public class SignAndNotarize extends DefaultTask {
         "-volname",
         volumeName,
         "-srcfolder",
-        appPath,
+        source.getAbsolutePath(),
         "-ov",
         "-format",
         "UDZO",
@@ -1115,19 +1161,18 @@ public class SignAndNotarize extends DefaultTask {
             .map(line -> line.replaceAll("\\s*id: ([0-9a-fA-F\\-]+)", "$1"))
             .findFirst();
 
-    id.ifPresent(
-        s ->
-            Shell.sh(
-                "xcrun",
-                "notarytool",
-                "log",
-                s,
-                "--team-id",
-                getAppleIDTeamID(),
-                "--apple-id",
-                getAppleIDUser(),
-                "--password",
-                getAppleIDPassword()));
+    id.ifPresent(s ->
+        Shell.sh(
+            "xcrun",
+            "notarytool",
+            "log",
+            s,
+            "--team-id",
+            getAppleIDTeamID(),
+            "--apple-id",
+            getAppleIDUser(),
+            "--password",
+            getAppleIDPassword()));
 
     // validate. Throw an error if the validation did not work.
     Shell.sh("spctl", "-a", "-t", "install", "-vv", dmgPath);
