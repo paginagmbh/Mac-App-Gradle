@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.LinkOption;
 import java.util.List;
 
 import org.gradle.api.GradleException;
@@ -31,7 +32,29 @@ final class DmgLayout {
     if (!source.isDirectory()) {
       throw new InvalidUserDataException("Could not find app bundle to package: " + source);
     }
-    if (options.getBackgroundPicture().isPresent()
+    if (options.getLayoutDmg().isPresent() && options.getLayoutDirectory().isPresent()) {
+      throw new InvalidUserDataException("Configure either layoutDmg or layoutDirectory, not both.");
+    }
+    if (options.getLayoutDirectory().isPresent()) {
+      Path directory = options.getLayoutDirectory().get().getAsFile().toPath();
+      if (!Files.isRegularFile(directory.resolve(
+          DmgOptions.templateName(options.getLayoutPrefix().get())), LinkOption.NOFOLLOW_LINKS)) {
+        throw new InvalidUserDataException("Layout directory has no "
+            + DmgOptions.templateName(options.getLayoutPrefix().get()) + ": " + directory);
+      }
+    } else if (options.getLayoutDmg().isPresent()) {
+      File layout = options.getLayoutDmg().get().getAsFile();
+      if (!layout.isFile()) {
+        throw new InvalidUserDataException("Layout DMG does not exist: " + layout);
+      }
+      try {
+        if (layout.getCanonicalFile().equals(output.getCanonicalFile())) {
+          throw new InvalidUserDataException("Layout DMG must not be the output DMG: " + layout);
+        }
+      } catch (IOException e) {
+        throw new GradleException("Could not resolve layout DMG path", e);
+      }
+    } else if (options.getBackgroundPicture().isPresent()
         && !options.getBackgroundPicture().get().getAsFile().isFile()) {
       throw new InvalidUserDataException(
           "DMG background picture does not exist: "
@@ -94,6 +117,19 @@ final class DmgLayout {
       Path workspace) throws IOException {
     Path contents = Files.createDirectory(workspace.resolve("contents"));
     Shell.sh("ditto", source.toString(), contents.resolve(source.getFileName()).toString());
+    if (options.getLayoutDmg().isPresent() || options.getLayoutDirectory().isPresent()) {
+      if (options.getLayoutDirectory().isPresent()) {
+        Path directory = options.getLayoutDirectory().get().getAsFile().toPath();
+        copyLayout(directory, DmgOptions.templateName(options.getLayoutPrefix().get()),
+            "background", contents);
+      } else {
+        extractLayout(options.getLayoutDmg().get().getAsFile().toPath(), contents);
+      }
+      Files.createSymbolicLink(contents.resolve("Applications"), Path.of("/Applications"));
+      Shell.sh("hdiutil", "create", "-volname", volumeName, "-srcfolder", contents.toString(),
+          "-fs", "HFS+", "-format", "UDZO", "-ov", output.toString());
+      return;
+    }
     if (options.getBackgroundPicture().isPresent()) {
       Path directory = Files.createDirectory(contents.resolve(".background"));
       Shell.sh("sips", "-s", "format", "tiff",
@@ -136,6 +172,40 @@ final class DmgLayout {
     }
     Shell.sh("hdiutil", "convert", image.toString(), "-format", "UDZO",
         "-ov", "-o", output.toString());
+  }
+
+  static void extractLayout(Path image, Path contents) throws IOException {
+    Path mount = Files.createTempDirectory("mac-app-dmg-layout-").toRealPath();
+    boolean mounted = false;
+    try {
+      Shell.sh("hdiutil", "attach", "-readonly", "-nobrowse", "-noautoopen",
+          "-mountpoint", mount.toString(), image.toAbsolutePath().toString());
+      mounted = true;
+      try {
+        copyLayout(mount, ".DS_Store", ".background", contents);
+      } finally {
+        Shell.sh("hdiutil", "detach", mount.toString());
+        mounted = false;
+      }
+    } finally {
+      if (!mounted) Files.delete(mount);
+    }
+  }
+
+  private static void copyLayout(
+      Path source, String metadataName, String backgroundName, Path contents) throws IOException {
+    Path metadata = source.resolve(metadataName);
+    if (!Files.isRegularFile(metadata, LinkOption.NOFOLLOW_LINKS)) {
+      throw new InvalidUserDataException("Layout has no root " + metadataName + " file: " + source);
+    }
+    Files.copy(metadata, contents.resolve(".DS_Store"));
+    Path background = source.resolve(backgroundName);
+    if (Files.exists(background, LinkOption.NOFOLLOW_LINKS)) {
+      if (!Files.isDirectory(background, LinkOption.NOFOLLOW_LINKS)) {
+        throw new InvalidUserDataException("Layout background must be a directory: " + background);
+      }
+      Shell.sh("ditto", background.toString(), contents.resolve(".background").toString());
+    }
   }
 
   static String script(DmgOptions options, Path mount, String appName, Path background) {

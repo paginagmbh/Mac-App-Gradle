@@ -483,6 +483,65 @@ Gradle retains the generator's task dependency.
 Keep the image outside the signing task's `outdir`, which is cleared when signing starts.
 The plugin includes the background and generates `.DS_Store` automatically.
 
+#### Reusing a DMG layout without a graphical session
+
+For files that are easy to commit to Git, extract the layout once:
+
+```groovy
+extractDmgLayout {
+    sourceDmg = file("dist/Example App.dmg")
+    outputDirectory = file("src/dmg/layout")
+    prefix = "TEMPLATE" // Optional; produces TEMPLATE.DS_Store
+}
+```
+
+Run `./gradlew extractDmgLayout`.
+The output contains *TEMPLATE.DS_Store* and an optional non-hidden *background/* directory, including any *@2x* files.
+The prefix is configurable; for example *"INSTALLER"* produces *INSTALLER.DS_Store*.
+These names avoid the usual exact *.DS_Store* ignore rule (broader custom Git ignore rules may still apply).
+The task synchronizes its output directory, removing stale files: use a dedicated directory and keep the source DMG outside it.
+Commit the extracted files, not the original DMG.
+
+Reuse those files on the build Mac:
+
+```groovy
+macApp {
+    dmg {
+        layoutDirectory = file("src/dmg/layout")
+        layoutPrefix = "TEMPLATE" // Match the extraction prefix; TEMPLATE is the default
+    }
+}
+```
+
+Packaging restores the metadata name to *.DS_Store* and copies *background/* to *.background/*.
+No original DMG, Finder automation, or graphical login is needed for this mode.
+Choose either `layoutDirectory` or `layoutDmg`, not both.
+The portability caveat below applies equally to extracted files.
+
+To reuse the layout of a DMG previously prepared in Finder:
+
+```groovy
+macApp {
+    dmg {
+        layoutDmg = file("src/dmg/layout.dmg")
+    }
+}
+```
+
+The plugin mounts that image read-only, extracts its root *.DS_Store* and optional *.background* directory (including *@2x* files), then creates a new image containing the current app and an Applications shortcut.
+Other source-image files are not included.
+This mode uses macOS command-line tools only: no Finder automation or graphical login is required.
+The signed DMG inherits it unless explicitly configured otherwise.
+`layoutDmg` or `layoutDirectory` takes precedence over background, window, and icon settings; edit the source DMG to change its layout.
+Its app filename must match the current app for saved icon positions to apply.
+Keep the source DMG outside build output directories and do not use the output DMG itself as the source.
+
+**Background portability:** extraction copies the metadata unchanged, not the source volume's identity.
+Finder aliases/bookmarks may still point to the old volume, so a background is not guaranteed to resolve in the new image.
+Check the result with the source DMG ejected, ideally on another Mac.
+This mode does not repair references or preserve the source volume identity.
+Missing *.DS_Store* or an invalid source image fails the build.
+
 
 **existingMacAppBundle** (Optional, default: `null`)
 
@@ -620,6 +679,11 @@ public static final String name = meta.getString("name");
 
 
 ## Changelog
+
+### 2.0.8
+
+* Added support for storing DMG layout instead of automating Finder at runtime.
+
 
 ### 2.0.7
 

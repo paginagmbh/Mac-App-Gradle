@@ -6,9 +6,12 @@ import java.util.Collections;
 
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
@@ -19,6 +22,9 @@ import javax.inject.Inject;
 /** Optional Finder layout for a disk image. Coordinates and sizes are in pixels. */
 public class DmgOptions {
   private final RegularFileProperty backgroundPicture;
+  private final RegularFileProperty layoutDmg;
+  private final DirectoryProperty layoutDirectory;
+  private final Property<String> layoutPrefix;
   private List<Integer> appIconPosition = List.of(160, 140);
   private List<Integer> applicationsIconPosition = List.of(480, 140);
   private List<Integer> windowSize = List.of(640, 400);
@@ -33,6 +39,78 @@ public class DmgOptions {
   @Inject
   public DmgOptions(ObjectFactory objects) {
     backgroundPicture = objects.fileProperty();
+    layoutDmg = objects.fileProperty();
+    layoutDirectory = objects.directoryProperty();
+    layoutPrefix = objects.property(String.class).convention("TEMPLATE");
+  }
+
+  /**
+   * Returns an extracted layout directory containing a prefixed DS_Store and background folder.
+   *
+   * @return optional reusable layout directory
+   */
+  @InputDirectory
+  @Optional
+  @PathSensitive(PathSensitivity.RELATIVE)
+  public DirectoryProperty getLayoutDirectory() {
+    return layoutDirectory;
+  }
+
+  /**
+   * Sets an extracted layout directory.
+   *
+   * @param directory directory containing TEMPLATE.DS_Store and optional background/
+   */
+  public void setLayoutDirectory(File directory) {
+    layoutDirectory.set(directory);
+  }
+
+  /**
+   * Returns the prefix used for the stored DS_Store filename.
+   *
+   * @return template prefix, defaulting to TEMPLATE
+   */
+  @Input
+  public Property<String> getLayoutPrefix() {
+    return layoutPrefix;
+  }
+
+  /**
+   * Sets the prefix matching the extraction task.
+   *
+   * @param prefix template filename prefix
+   */
+  public void setLayoutPrefix(String prefix) {
+    templateName(prefix);
+    layoutPrefix.set(prefix);
+  }
+
+  static String templateName(String prefix) {
+    if (prefix == null || prefix.isBlank() || prefix.contains("/") || prefix.contains("\\")) {
+      throw new InvalidUserDataException("Layout prefix must be a nonempty filename prefix.");
+    }
+    return prefix + ".DS_Store";
+  }
+
+  /**
+   * Returns a DMG from which to copy Finder metadata and backgrounds without running Finder.
+   *
+   * @return optional source DMG; its layout takes precedence over generated layout settings
+   */
+  @InputFile
+  @Optional
+  @PathSensitive(PathSensitivity.NONE)
+  public RegularFileProperty getLayoutDmg() {
+    return layoutDmg;
+  }
+
+  /**
+   * Sets the source DMG for reusing its layout.
+   *
+   * @param file DMG containing a root .DS_Store and optional .background directory
+   */
+  public void setLayoutDmg(File file) {
+    layoutDmg.set(file);
   }
 
   /**
@@ -165,7 +243,8 @@ public class DmgOptions {
    */
   @Input
   public boolean isEnabled() {
-    return configured || backgroundPicture.isPresent();
+    return configured || backgroundPicture.isPresent() || layoutDmg.isPresent()
+        || layoutDirectory.isPresent();
   }
 
   void enable() {

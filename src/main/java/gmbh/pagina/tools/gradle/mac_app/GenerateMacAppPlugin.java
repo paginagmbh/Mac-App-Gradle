@@ -26,6 +26,7 @@ public class GenerateMacAppPlugin implements Plugin<Project> {
   @Override
   public void apply(Project project) {
     project.getPlugins().apply("application");
+    project.getTasks().register("extractDmgLayout", ExtractDmgLayout.class);
 
     JavaApplication javaApplication = project.getExtensions().getByType(JavaApplication.class);
     JavaPluginExtension javaPluginExtension =
